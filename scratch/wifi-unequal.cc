@@ -65,6 +65,7 @@ std::ofstream phyTxTraceFile;      ///< File that traces PHY transmissions  over
 std::ofstream macTxTraceFile;      ///< File that traces MAC transmissions  over time
 std::ofstream macRxTraceFile;      ///< File that traces MAC receptions  over time
 std::ofstream socketSendTraceFile; ///< File that traces packets transmitted by the application  over time
+std::ofstream snrTraceFile;
 
 std::map<Mac48Address, uint64_t> packetsReceived;              ///< Map that stores the total packets received per STA (and addressed to that STA)
 std::map<Mac48Address, uint64_t> bytesReceived;                ///< Map that stores the total bytes received per STA (and addressed to that STA)
@@ -82,6 +83,7 @@ std::map<Mac48Address, Time> timeLastReceived;     ///< Map that stores the time
 std::map<Mac48Address, Time> timeFirstTransmitted; ///< Map that stores the time at which the first packet was transmitted per STA
 std::map<Mac48Address, Time> timeLastTransmitted;  ///< Map that stores the time at which the last packet was transmitted per STA
 
+std::map<double, uint64_t> snrMap;
 std::set<uint32_t> associated; ///< Contains the IDs of the STAs that successfully associated to the access point (in infrastructure mode only)
 
 bool tracing = false;    ///< Flag to enable/disable generation of tracing files
@@ -432,7 +434,7 @@ IncrementCounter (std::map<Mac48Address, uint64_t> & counter, Mac48Address addr,
 }
 
 void
-TracePacketReception (std::string context, Ptr<const Packet> p, uint16_t channelFreqMhz, WifiTxVector txVector, MpduInfo aMpdu, SignalNoiseDbm signalNoise)
+TracePacketReception (std::string context, Ptr<const Packet> p, uint16_t channelFreqMhz, WifiTxVector txVector, MpduInfo aMpdu, SignalNoiseDbm signalNoise, uint16_t staId)
 {
   Ptr<Packet> packet = p->Copy ();
   if (txVector.IsAggregation ())
@@ -493,7 +495,7 @@ BackoffTrace (std::string context, uint32_t newVal)
 }
 
 void
-PhyRxTrace (std::string context, Ptr<const Packet> p)
+PhyRxTrace (std::string context, Ptr<const Packet> p, RxPowerWattPerChannelBand power)
 {
   NS_LOG_INFO ("PHY-RX-START time=" << Simulator::Now () << " node=" << ContextToNodeId (context) << " size=" << p->GetSize ());
 }
@@ -519,7 +521,7 @@ PhyRxDropTrace (std::string context, Ptr<const Packet> p, WifiPhyRxfailureReason
       break;
     case BUSY_DECODING_PREAMBLE:
     {
-      if (p->GetSize () >= (pktSize)) // ignore non-data frames
+      if (p->GetSize () >= pktSize) // ignore non-data frames
         {
           IncrementCounter (rxEventWhileDecodingPreamble, addr);
         }
@@ -527,7 +529,7 @@ PhyRxDropTrace (std::string context, Ptr<const Packet> p, WifiPhyRxfailureReason
     }
     case RXING:
     {
-      if (p->GetSize () >= (pktSize)) // ignore non-data frames
+      if (p->GetSize () >= pktSize) // ignore non-data frames
         {
           IncrementCounter (rxEventWhileRxing, addr);
         }
@@ -535,7 +537,7 @@ PhyRxDropTrace (std::string context, Ptr<const Packet> p, WifiPhyRxfailureReason
     }
     case TXING:
     {
-      if (p->GetSize () >= (pktSize)) // ignore non-data frames
+      if (p->GetSize () >= pktSize) // ignore non-data frames
         {
           IncrementCounter (rxEventWhileTxing, addr);
         }
@@ -549,7 +551,7 @@ PhyRxDropTrace (std::string context, Ptr<const Packet> p, WifiPhyRxfailureReason
       break;
     case RECEPTION_ABORTED_BY_TX:
     {
-      if (p->GetSize () >= (pktSize)) // ignore non-data frames
+      if (p->GetSize () >= pktSize) // ignore non-data frames
         {
           IncrementCounter (rxEventAbortedByTx, addr);
         }
@@ -557,7 +559,7 @@ PhyRxDropTrace (std::string context, Ptr<const Packet> p, WifiPhyRxfailureReason
     }
     case L_SIG_FAILURE:
     {
-      if (p->GetSize () >= (pktSize)) // ignore non-data frames
+      if (p->GetSize () >= pktSize) // ignore non-data frames
         {
           IncrementCounter (phyHeaderFailed, addr);
         }
@@ -592,6 +594,7 @@ void
 PhyRxOkTrace (std::string context, Ptr<const Packet> p, double snr, WifiMode mode, WifiPreamble preamble)
 {
   uint8_t nMpdus = (p->GetSize () / pktSize);
+  snr = RatioToDb(snr);
   NS_LOG_INFO ("PHY-RX-OK time=" << Simulator::Now () << " node="
                                  << ContextToNodeId (context) << " size="
                                  << p->GetSize () << " nMPDUs="
@@ -605,23 +608,44 @@ PhyRxOkTrace (std::string context, Ptr<const Packet> p, double snr, WifiMode mod
         {
           NS_FATAL_ERROR ("A-MPDU settings not properly applied: maximum configured MPDUs is " << +maxMpdus << " but received an A-MPDU containing " << +nMpdus << " MPDUs");
         }
-      NS_LOG_WARN ("Warning: less MPDUs aggregated in a received A-MPDU (" << +nMpdus << ") than configured (" << +maxMpdus << ")");
+      // NS_LOG_WARN ("Warning: less MPDUs aggregated in a received A-MPDU (" << +nMpdus << ") than configured (" << +maxMpdus << ")");
     }
-  if (p->GetSize () >= (pktSize)) // ignore non-data frames
+  if (p->GetSize () >= pktSize) // ignore non-data frames
     {
       Mac48Address addr = ContextToMac (context);
       IncrementCounter (psduSucceeded, addr);
+    }
+  
+  std::map<double, uint64_t>::iterator intr = snrMap.find(snr);
+  if (intr != snrMap.end())
+    {
+      (*intr).second++;
+    }
+  else
+    {
+      snrMap.insert(std::pair<double, uint64_t>(snr, 1));
     }
 }
 
 void
 PhyRxErrorTrace (std::string context, Ptr<const Packet> p, double snr)
 {
+  snr = RatioToDb(snr);
   NS_LOG_INFO ("PHY-RX-ERROR time=" << Simulator::Now () << " node=" << ContextToNodeId (context) << " size=" << p->GetSize () << " snr=" << snr);
-  if (p->GetSize () >= (pktSize)) // ignore non-data frames
+  if (p->GetSize () >= pktSize) // ignore non-data frames
     {
       Mac48Address addr = ContextToMac (context);
       IncrementCounter (psduFailed, addr);
+    }
+  
+  std::map<double, uint64_t>::iterator intr = snrMap.find(snr);
+  if (intr != snrMap.end())
+    {
+      (*intr).second++;
+    }
+  else
+    {
+      snrMap.insert(std::pair<double, uint64_t>(snr, 1));
     }
 }
 
@@ -633,7 +657,7 @@ PhyTxTrace (std::string context, Ptr<const Packet> p, double txPowerW)
     {
       phyTxTraceFile << Simulator::Now ().GetSeconds () << " " << ContextToNodeId (context) << " size=" << p->GetSize () << " " << txPowerW << std::endl;
     }
-  if (p->GetSize () >= (pktSize)) // ignore non-data frames
+  if (p->GetSize () >= pktSize) // ignore non-data frames
     {
       Mac48Address addr = ContextToMac (context);
       IncrementCounter (packetsTransmitted, addr);
@@ -720,7 +744,7 @@ public:
   Experiment ();
   int Run (const WifiHelper &wifi, const YansWifiPhyHelper &wifiPhy, const WifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel,
            uint32_t trialNumber, uint32_t networkSize, double duration, bool pcap, bool infra, uint16_t channelWidth, uint16_t guardIntervalNs,
-           double distance, double apTxPower, double staTxPower);
+           double distance, double apTxPower, double staTxPower, uint16_t pktInterval);
 };
 
 Experiment::Experiment ()
@@ -730,7 +754,7 @@ Experiment::Experiment ()
 int
 Experiment::Run (const WifiHelper &helper, const YansWifiPhyHelper &wifiPhy, const WifiMacHelper &wifiMac, const YansWifiChannelHelper &wifiChannel,
                  uint32_t trialNumber, uint32_t networkSize, double duration, bool pcap, bool infra, uint16_t channelWidth, uint16_t guardIntervalNs,
-                 double distance, double apTxPower, double staTxPower)
+                 double distance, double apTxPower, double staTxPower, uint16_t pktInterval)
 {
   NodeContainer wifiNodes;
   if (infra)
@@ -803,7 +827,7 @@ Experiment::Run (const WifiHelper &helper, const YansWifiPhyHelper &wifiPhy, con
   positionAlloc->Add (Vector (1.0, 1.0, 0.0));
 
   // Set postion for STAs
-  double angle = (static_cast<double> (360) / (nNodes - 1));
+  double angle = (static_cast<double> (10) / (nNodes - 1));
   for (uint32_t i = 0; i < (nNodes - 1); ++i)
     {
       positionAlloc->Add (Vector (1.0 + (distance * cos ((i * angle * PI) / 180)), 1.0 + (distance * sin ((i * angle * PI) / 180)), 0.0));
@@ -834,7 +858,7 @@ Experiment::Run (const WifiHelper &helper, const YansWifiPhyHelper &wifiPhy, con
       wifiNodes.Get (i)->AddApplication (client);
       client->SetAttribute ("PacketSize", UintegerValue (pktSize));
       client->SetAttribute ("MaxPackets", UintegerValue (0));
-      client->SetAttribute ("Interval", TimeValue (MilliSeconds (1))); //TODO: reduce it for lower rates, increase it for higher rates
+      client->SetAttribute ("Interval", TimeValue (MicroSeconds (pktInterval)));
       double start = startTime->GetValue ();
       NS_LOG_DEBUG ("Client " << i << " starting at " << start);
       client->SetStartTime (Seconds (start));
@@ -923,8 +947,9 @@ Experiment::Run (const WifiHelper &helper, const YansWifiPhyHelper &wifiPhy, con
       macTxTraceFile.flush ();
       macRxTraceFile.flush ();
       socketSendTraceFile.flush ();
+      snrTraceFile.flush ();
     }
-  
+    
   return 0;
 }
 
@@ -959,6 +984,7 @@ int main (int argc, char *argv[])
   double frequency = 5;                   ///< The operating frequency band: 2.4, 5 or 6
   uint16_t channelWidth = 20;             ///< The constant channel width in MHz (only for 11n/ac/ax)
   uint16_t guardIntervalNs = 800;         ///< The guard interval in nanoseconds (800 or 400 for 11n/ac, 800 or 1600 or 3200 for 11 ax)
+  uint16_t pktInterval = 1000;            ///< The socket packet interval in microseconds (a higher value is needed to reach saturation conditions as the channel bandwidth or the MCS increases)
   double distance = 0.001;                ///< The distance in meters between the AP and the STAs
   double apTxPower = 30;                  ///< The transmit power of the AP in dBm (if infrastructure only)
   double staTxPower = 30;                 ///< The transmit power of each STA in dBm (or all STAs if adhoc)
@@ -998,6 +1024,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("distance", "Set the distance in meters between the AP and the STAs", distance);
   cmd.AddValue ("apTxPower", "Set the transmit power of the AP in dBm (if infrastructure only)", apTxPower);
   cmd.AddValue ("staTxPower", "Set the transmit power of each STA in dBm (or all STAs if adhoc)", staTxPower);
+  cmd.AddValue ("pktInterval", "Set the socket packet interval in microseconds", pktInterval);
   cmd.Parse (argc, argv);
 
   if (tracing)
@@ -1032,8 +1059,13 @@ int main (int argc, char *argv[])
         {
           NS_FATAL_ERROR ("Failed to open file wifi-bianchi-socket-send-trace.out");
         }
+      snrTraceFile.open ("wifi-bianchi-snr.out");
+      if (!snrTraceFile.is_open ())
+        {
+          NS_FATAL_ERROR ("Failed to open file wifi-bianchi-snr.out");
+        }
     }
-
+  
   if (verbose >= 1)
     {
       LogComponentEnable ("WifiBianchi", LOG_LEVEL_ALL);
@@ -1047,11 +1079,18 @@ int main (int argc, char *argv[])
       WifiHelper::EnableLogComponents ();
     }
 
+  std::stringstream phyModeStr;
+  phyModeStr << phyMode;
+  if (phyMode.find ("Mcs") != std::string::npos)
+    {
+      phyModeStr << "_" << channelWidth << "MHz";
+    }
+
   std::stringstream ss;
-  ss << "wifi-"<< standard << "-p-" << pktSize << (infra ? "-infrastructure" : "-adhoc") << "-r-" << phyMode << "-min-" << nMinStas << "-max-" << nMaxStas << "-step-" << nStepSize << "-throughput.plt";
+  ss << "wifi-"<< standard << "-p-" << pktSize << (infra ? "-infrastructure" : "-adhoc") << "-r-" << phyModeStr.str () << "-min-" << nMinStas << "-max-" << nMaxStas << "-step-" << nStepSize << "-throughput.plt";
   std::ofstream throughputPlot (ss.str ().c_str ());
   ss.str ("");
-  ss << "wifi-" << standard << "-p-" << pktSize << (infra ? "-infrastructure" : "-adhoc") <<"-r-" << phyMode << "-min-" << nMinStas << "-max-" << nMaxStas << "-step-" << nStepSize << "-throughput.eps";
+  ss << "wifi-" << standard << "-p-" << pktSize << (infra ? "-infrastructure" : "-adhoc") <<"-r-" << phyModeStr.str () << "-min-" << nMinStas << "-max-" << nMaxStas << "-step-" << nStepSize << "-throughput.eps";
   Gnuplot gnuplot = Gnuplot (ss.str ());
 
   WifiStandard wifiStandard;
@@ -1189,17 +1228,17 @@ int main (int argc, char *argv[])
           rxEventAbortedByTx.clear ();
           associated.clear ();
           throughput = 0;
-          std::cout << "Trial " << runIndex + 1 << " of " << trials << "; "<< phyMode  << " (" << channelWidth << " MHz) for " << n << " nodes " << std::endl;
+          std::cout << "Trial " << runIndex + 1 << " of " << trials << "; "<< phyModeStr.str () << " for " << n << " nodes " << std::endl;
           if (tracing)
             {
-              cwTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; "<< phyMode << " for " << n << " nodes" << std::endl;
-              backoffTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; "<< phyMode << " for " << n << " nodes" << std::endl;
-              phyTxTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyMode << " for " << n << " nodes" << std::endl;
-              macTxTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyMode << " for " << n << " nodes" << std::endl;
-              macRxTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyMode << " for " << n << " nodes" << std::endl;
-              socketSendTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyMode << " for " << n << " nodes" << std::endl;
+              cwTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; "<< phyModeStr.str () << " for " << n << " nodes" << std::endl;
+              backoffTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; "<< phyModeStr.str () << " for " << n << " nodes" << std::endl;
+              phyTxTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyModeStr.str () << " for " << n << " nodes" << std::endl;
+              macTxTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyModeStr.str () << " for " << n << " nodes" << std::endl;
+              macRxTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyModeStr.str () << " for " << n << " nodes" << std::endl;
+              socketSendTraceFile << "# Trial " << runIndex + 1 << " of " << trials << "; " << phyModeStr.str () << " for " << n << " nodes" << std::endl;
             }
-          experiment.Run (wifi, wifiPhy, wifiMac, wifiChannel, runIndex, n, duration, pcap, infra, channelWidth, guardIntervalNs, distance, apTxPower, staTxPower);
+          experiment.Run (wifi, wifiPhy, wifiMac, wifiChannel, runIndex, n, duration, pcap, infra, channelWidth, guardIntervalNs, distance, apTxPower, staTxPower, pktInterval);
           uint32_t k = 0;
           if (bytesReceived.size () != n)
             {
@@ -1250,7 +1289,7 @@ int main (int argc, char *argv[])
       bool rateFound = false;
       double relativeErrorDifs = 0;
       double relativeErrorEifs = 0;
-      auto itDifs = bianchiResultsDifs.find (phyMode);
+      auto itDifs = bianchiResultsDifs.find (phyModeStr.str ());
       if (itDifs != bianchiResultsDifs.end ())
         {
           rateFound = true;
@@ -1265,7 +1304,7 @@ int main (int argc, char *argv[])
               NS_FATAL_ERROR ("No Bianchi results (DIFS) calculated for that number of stations!");
             }
         }
-      auto itEifs = bianchiResultsEifs.find (phyMode);
+      auto itEifs = bianchiResultsEifs.find (phyModeStr.str ());
       if (itEifs != bianchiResultsEifs.end ())
         {
           rateFound = true;
@@ -1300,7 +1339,7 @@ int main (int argc, char *argv[])
     }
   dataset.SetTitle ("ns-3");
 
-  auto itDifs = bianchiResultsDifs.find (phyMode);
+  auto itDifs = bianchiResultsDifs.find (phyModeStr.str ());
   if (itDifs != bianchiResultsDifs.end ())
     {
       for (uint32_t i = nMinStas; i <= nMaxStas; i += nStepSize)
@@ -1322,7 +1361,7 @@ int main (int argc, char *argv[])
         }
     }
 
-  auto itEifs = bianchiResultsEifs.find (phyMode);
+  auto itEifs = bianchiResultsEifs.find (phyModeStr.str ());
   if (itEifs != bianchiResultsEifs.end ())
     {
       for (uint32_t i = nMinStas; i <= nMaxStas; i += nStepSize)
@@ -1385,6 +1424,7 @@ int main (int argc, char *argv[])
   gnuplot.GenerateOutput (throughputPlot);
   throughputPlot.close ();
 
+
   if (tracing)
     {
       cwTraceFile.close ();
@@ -1393,7 +1433,19 @@ int main (int argc, char *argv[])
       macTxTraceFile.close ();
       macRxTraceFile.close ();
       socketSendTraceFile.close ();
+      snrTraceFile.close ();
+    }
+  
+  std::map<double, uint64_t>::iterator iter; 
+  for(iter = snrMap.begin() ; iter != snrMap.end() ; iter++ )
+    {
+       if (tracing)
+        {
+          snrTraceFile << "SNR is: " << iter->first << "; Total number is: " << iter->second << std::endl;
+        }
+       std::cout << "SNR is: " << iter->first << "; Total number is: " << iter->second << std::endl;
     }
 
+  
   return 0;
 }
