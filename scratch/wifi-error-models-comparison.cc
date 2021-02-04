@@ -32,18 +32,19 @@
 #include "ns3/nist-error-rate-model.h"
 #include "ns3/table-based-error-rate-model.h"
 #include "ns3/wifi-tx-vector.h"
-
+#include <iomanip>
 using namespace ns3;
 
 int main (int argc, char *argv[])
 {
   uint32_t size = 1500 * 8; //bits
   bool tableErrorModelEnabled = true;
-  bool yansErrorModelEnabled = true;
-  bool nistErrorModelEnabled = true;
+  bool yansErrorModelEnabled = false;
+  bool nistErrorModelEnabled = false;
   uint8_t beginMcs = 0;
   uint8_t endMcs = 7;
   uint8_t stepMcs = 4;
+  double snrInput = 20;
   std::string format ("Ht");
 
   CommandLine cmd (__FILE__);
@@ -55,6 +56,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("includeTableErrorModel", "Flag to include/exclude Table-based error model", tableErrorModelEnabled);
   cmd.AddValue ("includeYansErrorModel", "Flag to include/exclude Yans error model", yansErrorModelEnabled);
   cmd.AddValue ("includeNistErrorModel", "Flag to include/exclude Nist error model", nistErrorModelEnabled);
+  cmd.AddValue ("snrInput", "Flag to include/exclude Nist error model", snrInput);
   cmd.Parse (argc, argv);
 
   std::ofstream errormodelfile ("wifi-error-rate-models.plt");
@@ -78,10 +80,9 @@ int main (int argc, char *argv[])
   mode.str ("");
   mode << format << "Mcs" << +endMcs;
   modes.push_back (mode.str ());
-
   for (uint32_t i = 0; i < modes.size (); i++)
     {
-      std::cout << modes[i] << std::endl;
+      // std::cout << modes[i] << std::endl;
       Gnuplot2dDataset yansdataset (modes[i]);
       Gnuplot2dDataset nistdataset (modes[i]);
       Gnuplot2dDataset tabledataset (modes[i]);
@@ -111,6 +112,7 @@ int main (int argc, char *argv[])
             }
           tabledataset.Add (snr, 1 - ps);
         }
+
       
       if (tableErrorModelEnabled)
         {
@@ -134,7 +136,9 @@ int main (int argc, char *argv[])
           plot.AddDataset (nistdataset);
         }
     }
-
+  double ps = table->GetChunkSuccessRate (WifiMode (modes[0]), txVector, std::pow (10.0, snrInput / 10.0), size);
+  std::cout << std::setprecision(8) << std::fixed;
+  std::cout<<"fer "<<(1 - ps)<<std::endl;
   plot.SetTerminal ("postscript eps color enh \"Times-BoldItalic\"");
   plot.SetLegend ("SNR(dB)", "Frame Error Rate");
 
