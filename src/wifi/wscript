@@ -1,7 +1,7 @@
 ## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
 def build(bld):
-    obj = bld.create_ns3_module('wifi', ['network', 'propagation', 'energy', 'spectrum', 'antenna', 'mobility'])
+    obj = bld.create_ns3_module('wifi', ['network', 'propagation', 'energy', 'spectrum', 'antenna', 'mobility', 'ns3-ai'])
     obj.source = [
         'model/wifi-utils.cc',
         'model/wifi-information-element.cc',
@@ -24,15 +24,6 @@ def build(bld):
         'model/wifi-phy-header.cc',
         'model/wifi-mac-header.cc',
         'model/wifi-mac-trailer.cc',
-        'model/wifi-tx-timer.cc',
-        'model/wifi-protection.cc',
-        'model/wifi-acknowledgment.cc',
-        'model/wifi-tx-parameters.cc',
-        'model/wifi-protection-manager.cc',
-        'model/wifi-default-protection-manager.cc',
-        'model/wifi-ack-manager.cc',
-        'model/wifi-default-ack-manager.cc',
-        'model/frame-exchange-manager.cc',
         'model/mac-low.cc',
         'model/mac-low-transmission-parameters.cc',
         'model/wifi-mac-queue.cc',
@@ -111,6 +102,7 @@ def build(bld):
         'model/wifi-ack-policy-selector.cc',
         'model/constant-wifi-ack-policy-selector.cc',
         'model/he-ru.cc',
+        'model/dcf-rl-env.cc',
         'helper/wifi-radio-energy-model-helper.cc',
         'helper/athstats-helper.cc',
         'helper/wifi-helper.cc',
@@ -133,8 +125,7 @@ def build(bld):
         'test/wifi-phy-thresholds-test.cc',
         'test/wifi-phy-reception-test.cc',
         'test/inter-bss-test-suite.cc',
-        'test/wifi-phy-ofdma-test.cc',
-        'test/wifi-mac-queue.cc',
+        'test/wifi-phy-ofdma-test.cc'
         ]
 
     # Tests encapsulating example programs should be listed here
@@ -203,15 +194,6 @@ def build(bld):
         'model/channel-access-manager.h',
         'model/mac-tx-middle.h', 
         'model/mac-rx-middle.h', 
-        'model/wifi-tx-timer.h',
-        'model/wifi-protection.h',
-        'model/wifi-acknowledgment.h',
-        'model/wifi-tx-parameters.h',
-        'model/wifi-protection-manager.h',
-        'model/wifi-default-protection-manager.h',
-        'model/wifi-ack-manager.h',
-        'model/wifi-default-ack-manager.h',
-        'model/frame-exchange-manager.h',
         'model/mac-low.h',
         'model/mac-low-transmission-parameters.h',
         'model/originator-block-ack-agreement.h',
@@ -262,6 +244,7 @@ def build(bld):
         'model/constant-wifi-ack-policy-selector.h',
         'model/he-ru.h',
         'model/reference/error-rate-tables.h',
+        'model/dcf-rl-env.h',
         'helper/wifi-radio-energy-model-helper.h',
         'helper/athstats-helper.h',
         'helper/wifi-helper.h',

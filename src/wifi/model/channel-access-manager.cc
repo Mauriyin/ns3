@@ -25,7 +25,7 @@
 #include "wifi-phy-listener.h"
 #include "wifi-phy.h"
 #include "mac-low.h"
-#include "frame-exchange-manager.h"
+#include "dcf-rl-env.h"
 
 namespace ns3 {
 
@@ -137,7 +137,6 @@ ChannelAccessManager::DoDispose (void)
       i = 0;
     }
   m_phy = 0;
-  m_feManager = 0;
 }
 
 void
@@ -168,14 +167,6 @@ ChannelAccessManager::SetupLow (Ptr<MacLow> low)
 {
   NS_LOG_FUNCTION (this << low);
   low->RegisterChannelAccessManager (this);
-}
-
-void
-ChannelAccessManager::SetupFrameExchangeManager (Ptr<FrameExchangeManager> feManager)
-{
-  NS_LOG_FUNCTION (this << feManager);
-  m_feManager = feManager;
-  m_feManager->SetChannelAccessManager (this);
 }
 
 Time
@@ -274,8 +265,7 @@ ChannelAccessManager::NeedBackoffUponAccess (Ptr<Txop> txop)
    *    with that AC has now become non-empty and any other transmit queues
    *    associated with that AC are empty; the medium is busy on the primary channel
    */
-  if (!txop->HasFramesToTransmit () && txop->GetAccessStatus () != Txop::GRANTED
-      && !txop->GetLow ()->IsCfPeriod () && txop->GetBackoffSlots () == 0)
+  if (!txop->HasFramesToTransmit () && !txop->GetLow ()->IsCfPeriod () && txop->GetBackoffSlots () == 0)
     {
       if (!IsBusy ())
         {
@@ -332,8 +322,36 @@ ChannelAccessManager::RequestAccess (Ptr<Txop> txop, bool isCfPeriod)
       txop->UpdateBackoffSlotsNow (0, accessGrantStart + (nIntSlots * GetSlot ()));
     }
 
-  UpdateBackoff ();
-  NS_ASSERT (txop->GetAccessStatus () != Txop::REQUESTED);
+  // UpdateBackoff ();
+  if (m_useRl)
+    {
+      bool can = !gDcfRl->step (m_phy);
+      // std::cout << m_phy->m_pid << " " << can << std::endl;
+      if (can)
+        {
+          txop->UpdateBackoffSlotsNow (txop->GetBackoffSlots (), GetBackoffStartFor (txop));
+        }
+      else
+        {
+          txop->StartBackoffNow (32);
+        }
+      // for (auto state: m_txops)
+      //   {
+      //     if (can)
+      //       {
+      //         state->UpdateBackoffSlotsNow (state->GetBackoffSlots (), GetBackoffStartFor (state));
+      //       }
+      //     else
+      //       {
+      //         state->StartBackoffNow (32);
+      //       }
+      //   }
+    }
+  else
+    {
+      UpdateBackoff ();
+    }
+  NS_ASSERT (!txop->IsAccessRequested ());
   txop->NotifyAccessRequested ();
   DoGrantDcfAccess ();
   DoRestartAccessTimeoutIfNeeded ();
@@ -353,7 +371,7 @@ ChannelAccessManager::DoGrantDcfAccess (void)
   for (Txops::iterator i = m_txops.begin (); i != m_txops.end (); k++)
     {
       Ptr<Txop> txop = *i;
-      if (txop->GetAccessStatus () == Txop::REQUESTED
+      if (txop->IsAccessRequested ()
           && GetBackoffEndFor (txop) <= Simulator::Now () )
         {
           /**
@@ -367,7 +385,7 @@ ChannelAccessManager::DoGrantDcfAccess (void)
           for (Txops::iterator j = i; j != m_txops.end (); j++, k++)
             {
               Ptr<Txop> otherTxop = *j;
-              if (otherTxop->GetAccessStatus () == Txop::REQUESTED
+              if (otherTxop->IsAccessRequested ()
                   && GetBackoffEndFor (otherTxop) <= Simulator::Now ())
                 {
                   NS_LOG_DEBUG ("dcf " << k << " needs access. backoff expired. internal collision. slots=" <<
@@ -382,37 +400,18 @@ ChannelAccessManager::DoGrantDcfAccess (void)
             }
 
           /**
-           * Now, we notify all of these changes in one go if the EDCAF winning
-           * the contention actually transmitted a frame. It is necessary to
+           * Now, we notify all of these changes in one go. It is necessary to
            * perform first the calculations of which Txops are colliding and then
            * only apply the changes because applying the changes through notification
            * could change the global state of the manager, and, thus, could change
            * the result of the calculations.
            */
-          bool transmitted = true;
-          if (m_feManager != 0)
-            {          
-              transmitted = m_feManager->StartTransmission (txop);
-            }
-          else
+          txop->NotifyAccessGranted ();
+          for (auto collidingTxop : internalCollisionTxops)
             {
-              txop->NotifyAccessGranted ();
+              collidingTxop->NotifyInternalCollision ();
             }
-          if (transmitted)
-            {
-              for (auto& collidingTxop : internalCollisionTxops)
-                {
-                  collidingTxop->NotifyInternalCollision ();
-                }
-              break;
-            }
-          else
-            {
-              // reset the current state to the EDCAF that won the contention
-              // but did not transmit anything
-              i--;
-              k = std::distance (m_txops.begin (), i);
-            }
+          break;
         }
       i++;
     }
@@ -541,7 +540,7 @@ ChannelAccessManager::DoRestartAccessTimeoutIfNeeded (void)
   Time expectedBackoffEnd = Simulator::GetMaximumSimulationTime ();
   for (auto txop : m_txops)
     {
-      if (txop->GetAccessStatus () == Txop::REQUESTED)
+      if (txop->IsAccessRequested ())
         {
           Time tmp = GetBackoffEndFor (txop);
           if (tmp > Simulator::Now ())
@@ -683,7 +682,7 @@ ChannelAccessManager::NotifySwitchingStartNow (Time duration)
           NS_ASSERT (txop->GetBackoffSlots () == 0);
         }
       txop->ResetCw ();
-      txop->m_access = Txop::NOT_REQUESTED;
+      txop->m_accessRequested = false;
       txop->NotifyChannelSwitching ();
     }
 
@@ -742,7 +741,7 @@ ChannelAccessManager::NotifyWakeupNow (void)
           NS_ASSERT (txop->GetBackoffSlots () == 0);
         }
       txop->ResetCw ();
-      txop->m_access = Txop::NOT_REQUESTED;
+      txop->m_accessRequested = false;
       txop->NotifyWakeUp ();
     }
 }
@@ -761,7 +760,7 @@ ChannelAccessManager::NotifyOnNow (void)
           NS_ASSERT (txop->GetBackoffSlots () == 0);
         }
       txop->ResetCw ();
-      txop->m_access = Txop::NOT_REQUESTED;
+      txop->m_accessRequested = false;
       txop->NotifyOn ();
     }
 }
