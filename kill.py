@@ -12,7 +12,7 @@ for line in out.splitlines():
     # terminating process  
     os.kill(int(pid), signal.SIGKILL)  
 
-out=os.popen("ps -ef|grep \"uplink\"|grep -v grep").read()
+out=os.popen("ps -ef|grep \"wifi-unequal\"|grep -v grep").read()
 for line in out.splitlines():
     fields = line.split() 
               
