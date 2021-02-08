@@ -172,72 +172,115 @@ ack_rates = [
 ]
 
 mcs = 5
-for i in range(4):
-    tptBianchi5g = []
-    tptBianchi6g = []
-    tpt5g = []
-    tpt6g = []
-    distance = [5]
-    distances = [5]
-    txPowerDbm5g = 24
-    channelWidth = 20*(math.pow(2,i))
-    txPowerDbm6g = 10*math.log10(0.8 * channelWidth)
-    bianchi_result = bianchi_ax(data_rates[i][mcs], ack_rates[i][mcs], 1, 0, 0.0)
-    tptBianchi5g.append(bianchi_result[0])
-    tptBianchi6g.append(bianchi_result[0])
+distance_20 = []
+distance_40 = []
+distance_80 = []
+distance_160 = []
 
-    data_dir_5 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre5_dis"+ str(int(5))
-    data_dir_6 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre6_dis"+ str(int(5))
+
+path = "uneqaul_data" 
+files= os.listdir(path) 
+
+for flie in files: 
+     if not os.path.isdir(flie): 
+        if "mpdu1_band20_mcs5_fre5_dis" in flie:
+            nums = re.findall("\d+", flie)
+            # print(nums)
+            distance_20.append(int(nums[4]))
+        if "mpdu1_band40_mcs5_fre5_dis" in flie:
+            nums = re.findall("\d+", flie)
+            # print(nums)
+            distance_40.append(int(nums[4]))
+        if "mpdu1_band80_mcs5_fre5_dis" in flie:
+            nums = re.findall("\d+", flie)
+            # print(nums)
+            distance_80.append(int(nums[4]))
+        if "mpdu1_band160_mcs5_fre5_dis" in flie:
+            nums = re.findall("\d+", flie)
+            # print(nums)
+            distance_160.append(int(nums[4]))
+distance_20.sort()
+distance_40.sort()
+distance_80.sort()
+distance_160.sort()
+
+
+tpt5g = []
+tpt6g = []
+for i in range(len(distance_20)):
+    data_dir_5 =  "uneqaul_data/mpdu1_band20"  + "_mcs5_fre5_dis"+ str(int(distance_20[i]))
+    data_dir_6 =  "uneqaul_data/mpdu1_band20"  + "_mcs5_fre6_dis"+ str(int(distance_20[i]))
     tpt_5 = np.array(data_analysis(data_dir_5))
     tpt_6 = np.array(data_analysis(data_dir_6))
     tpt5g.append(tpt_5[0])
     tpt6g.append(tpt_6[0])
-    
-    for k in range(65):
-        dis = 10*(k+1)
-        distances.append(dis)
-        rxc = path_loss(distance = dis, m_referenceLoss = 46.6777, m_exponent = 2, m_referenceDistance = 1)
-        rxPower = txPowerDbm5g + rxc
-        rxPowerW = math.pow(10, (rxPower/10))/1000
-        snr = cal_snr(channelWidth, rxPowerW)
-        fer = cal_fer(snr)
-        bianchi_result = bianchi_ax(data_rates[i][mcs], ack_rates[i][mcs], 1, 0, fer)
-        tptBianchi5g.append(bianchi_result[0])
-        
-        rxc = path_loss(distance = dis, m_referenceLoss = 49.013, m_exponent = 2, m_referenceDistance = 1)
-        rxPower = txPowerDbm6g + rxc
-        rxPowerW = math.pow(10, (rxPower/10))/1000
-        snr = cal_snr(channelWidth, rxPowerW)
-        fer = cal_fer(snr)
-        bianchi_result = bianchi_ax(data_rates[i][mcs], ack_rates[i][mcs], 1, 0, fer)
-        tptBianchi6g.append(bianchi_result[0])
-    for k in range(12):
-        dis = 50*(k+1)
-        distance.append(dis)
-        data_dir_5 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre5_dis"+ str(int(50*(k+1)))
-        data_dir_6 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre6_dis"+ str(int(50*(k+1)))
-        tpt_5 = np.array(data_analysis(data_dir_5))
-        tpt_6 = np.array(data_analysis(data_dir_6))
-        tpt5g.append(tpt_5[0])
-        tpt6g.append(tpt_6[0])
+plt.figure(1)
 
-    distance.append(650)
-    tpt5g.append(0)
-    tpt6g.append(0)
-    # tptBianchi6g.append(0)
-    # tptBianchi5g.append(0)
-    print(distance, tpt5g, tptBianchi6g)
-    plt.figure(i)
-    
-    plt.plot(distances,tptBianchi5g,label='5 GHz Analysis', color='g', linestyle='-')
-    plt.plot(distances,tptBianchi6g,label='6 GHz Analysis', color='b', linestyle='-')
-    plt.scatter(distance,tpt5g,label='5 GHz ns-3',marker='*',color='black')
-    plt.scatter(distance,tpt6g,label='6 GHz ns-3',marker='o',color='black')
-    plt.xlabel('Distance')
-    plt.ylabel('Throughput (Mbps)')
-    plt.legend()
-    filename = 'mcs' + str(int(mcs)) +'_uplink' + str(int(channelWidth)) + '.png'
-    plt.savefig(filename,dpi=300,format='png')
-    plt.show()
+plt.plot(distance_20, tpt5g,label='5 GHz', color='g', linestyle='-')
+plt.plot(distance_20, tpt6g,label='6 GHz', color='b', linestyle='-')
+plt.xlabel('Distance')
+plt.ylabel('Throughput (Mbps)')
+plt.legend()
+filename = 'mcs' + str(int(mcs)) +'_unequal' + str(int(20)) + '.png'
+plt.savefig(filename,dpi=300,format='png')
+plt.show()
 
+tpt5g = []
+tpt6g = []
+for i in range(len(distance_40)):
+    data_dir_5 =  "uneqaul_data/mpdu1_band40"  + "_mcs5_fre5_dis"+ str(int(distance_40[i]))
+    data_dir_6 =  "uneqaul_data/mpdu1_band40"  + "_mcs5_fre6_dis"+ str(int(distance_40[i]))
+    tpt_5 = np.array(data_analysis(data_dir_5))
+    tpt_6 = np.array(data_analysis(data_dir_6))
+    tpt5g.append(tpt_5[0])
+    tpt6g.append(tpt_6[0])
+plt.figure(2)
 
+plt.plot(distance_40, tpt5g,label='5 GHz', color='g', linestyle='-')
+plt.plot(distance_40, tpt6g,label='6 GHz', color='b', linestyle='-')
+plt.xlabel('Distance')
+plt.ylabel('Throughput (Mbps)')
+plt.legend()
+filename = 'mcs' + str(int(mcs)) +'_unequal' + str(int(40)) + '.png'
+plt.savefig(filename,dpi=300,format='png')
+plt.show()
+
+tpt5g = []
+tpt6g = []
+for i in range(len(distance_80)):
+    data_dir_5 =  "uneqaul_data/mpdu1_band80"  + "_mcs5_fre5_dis"+ str(int(distance_80[i]))
+    data_dir_6 =  "uneqaul_data/mpdu1_band80"  + "_mcs5_fre6_dis"+ str(int(distance_80[i]))
+    tpt_5 = np.array(data_analysis(data_dir_5))
+    tpt_6 = np.array(data_analysis(data_dir_6))
+    tpt5g.append(tpt_5[0])
+    tpt6g.append(tpt_6[0])
+plt.figure(3)
+
+plt.plot(distance_80, tpt5g,label='5 GHz', color='g', linestyle='-')
+plt.plot(distance_80, tpt6g,label='6 GHz', color='b', linestyle='-')
+plt.xlabel('Distance')
+plt.ylabel('Throughput (Mbps)')
+plt.legend()
+filename = 'mcs' + str(int(mcs)) +'_unequal' + str(int(80)) + '.png'
+plt.savefig(filename,dpi=300,format='png')
+plt.show()
+
+tpt5g = []
+tpt6g = []
+for i in range(len(distance_160)):
+    data_dir_5 =  "uneqaul_data/mpdu1_band160"  + "_mcs5_fre5_dis"+ str(int(distance_160[i]))
+    data_dir_6 =  "uneqaul_data/mpdu1_band160"  + "_mcs5_fre6_dis"+ str(int(distance_160[i]))
+    tpt_5 = np.array(data_analysis(data_dir_5))
+    tpt_6 = np.array(data_analysis(data_dir_6))
+    tpt5g.append(tpt_5[0])
+    tpt6g.append(tpt_6[0])
+plt.figure(4)
+
+plt.plot(distance_160, tpt5g,label='5 GHz', color='g', linestyle='-')
+plt.plot(distance_160, tpt6g,label='6 GHz', color='b', linestyle='-')
+plt.xlabel('Distance')
+plt.ylabel('Throughput (Mbps)')
+plt.legend()
+filename = 'mcs' + str(int(mcs)) +'_unequal' + str(int(160)) + '.png'
+plt.savefig(filename,dpi=300,format='png')
+plt.show()
