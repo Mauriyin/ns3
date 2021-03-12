@@ -20,6 +20,7 @@
  *          Mathieu Lacage <mathieu.lacage@sophia.inria.fr> (for logic ported from wifi-phy)
  */
 
+#include <array>
 #include "erp-ofdm-phy.h"
 #include "erp-ofdm-ppdu.h"
 #include "ns3/wifi-psdu.h"
@@ -47,7 +48,18 @@ const PhyEntity::ModulationLookupTable ErpOfdmPhy::m_erpOfdmModulationLookupTabl
   { "ErpOfdmRate48Mbps", { WIFI_CODE_RATE_2_3, 64 } },
   { "ErpOfdmRate54Mbps", { WIFI_CODE_RATE_3_4, 64 } }
 };
+
+// ERP OFDM rates in bits per second
+static const std::array<uint64_t, 8> s_erpOfdmRatesBpsList =
+    {  6000000,  9000000, 12000000, 18000000,
+      24000000, 36000000, 48000000, 54000000};
+
 /* *NS_CHECK_STYLE_ON* */
+
+const std::array<uint64_t, 8>& GetErpOfdmRatesBpsList (void)
+{
+  return s_erpOfdmRatesBpsList;
+};
 
 ErpOfdmPhy::ErpOfdmPhy ()
   : OfdmPhy (OFDM_PHY_DEFAULT, false) //don't add OFDM modes to list
@@ -129,12 +141,6 @@ ErpOfdmPhy::GetErpOfdmRate (uint64_t rate)
     }
 }
 
-std::vector<uint64_t>
-ErpOfdmPhy::GetErpOfdmRatesBpsList (void)
-{
-  return OfdmPhy::GetOfdmRatesBpsList ().at (20);
-}
-
 #define GET_ERP_OFDM_MODE(x, f) \
 WifiMode \
 ErpOfdmPhy::Get ## x (void) \
@@ -166,6 +172,7 @@ ErpOfdmPhy::CreateErpOfdmMode (std::string uniqueName, bool isMandatory)
                                           MakeBoundCallback (&GetCodeRate, uniqueName),
                                           MakeBoundCallback (&GetConstellationSize, uniqueName),
                                           MakeBoundCallback (&GetPhyRate, uniqueName),
+                                          MakeCallback (&GetPhyRateFromTxVector),
                                           MakeBoundCallback (&GetDataRate, uniqueName),
                                           MakeCallback (&GetDataRateFromTxVector),
                                           MakeCallback (&IsModeAllowed));
@@ -190,6 +197,15 @@ ErpOfdmPhy::GetPhyRate (const std::string& name, uint16_t channelWidth, uint16_t
   uint16_t constellationSize = GetConstellationSize (name);
   uint64_t dataRate = OfdmPhy::CalculateDataRate (codeRate, constellationSize, channelWidth, guardInterval, nss);
   return OfdmPhy::CalculatePhyRate (codeRate, dataRate);
+}
+
+uint64_t
+ErpOfdmPhy::GetPhyRateFromTxVector (const WifiTxVector& txVector, uint16_t /* staId */)
+{
+  return GetPhyRate (txVector.GetMode ().GetUniqueName (),
+                     txVector.GetChannelWidth (),
+                     txVector.GetGuardInterval (),
+                     txVector.GetNss ());
 }
 
 uint64_t

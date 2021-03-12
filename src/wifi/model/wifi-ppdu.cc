@@ -43,7 +43,8 @@ WifiPpdu::WifiPpdu (const WifiConstPsduMap & psdus, const WifiTxVector& txVector
     m_modulation (txVector.IsValid () ? txVector.GetMode (psdus.begin()->first).GetModulationClass () : WIFI_MOD_CLASS_UNKNOWN),
     m_uid (uid),
     m_truncatedTx (false),
-    m_txPowerLevel (txVector.GetTxPowerLevel ())
+    m_txPowerLevel (txVector.GetTxPowerLevel ()),
+    m_txAntennas (txVector.GetNTx ())
 {
   NS_LOG_FUNCTION (this << psdus << txVector << uid);
   m_psdus = psdus;
@@ -63,6 +64,7 @@ WifiPpdu::GetTxVector (void) const
 {
   WifiTxVector txVector = DoGetTxVector ();
   txVector.SetTxPowerLevel (m_txPowerLevel);
+  txVector.SetNTx (m_txAntennas);
   return txVector;
 }
 
@@ -156,12 +158,6 @@ WifiPpdu::Copy (void) const
 }
 
 std::ostream & operator << (std::ostream &os, const Ptr<const WifiPpdu> &ppdu)
-{
-  ppdu->Print (os);
-  return os;
-}
-
-std::ostream & operator << (std::ostream &os, const Ptr<WifiPpdu> &ppdu)
 {
   ppdu->Print (os);
   return os;

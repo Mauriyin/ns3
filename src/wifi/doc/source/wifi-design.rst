@@ -91,11 +91,7 @@ beacons, and that accepts every attempt to associate.
 These three MAC high models share a common parent in
 ``ns3::RegularWifiMac``, which exposes, among other MAC
 configuration, an attribute ``QosSupported`` that allows
-configuration of 802.11e/WMM-style QoS support, an attribute
-``HtSupported`` that allows configuration of 802.11n High Throughput
-style support, an attribute ``VhtSupported`` that allows configuration
-of 802.11ac Very High Throughput style support and an attribute ``HeSupported``
-that allows configuration of 802.11ax High Efficiency style support.
+configuration of 802.11e/WMM-style QoS support.
 
 There are also several **rate control algorithms** that can be used by the
 MAC low layer.  A complete list of available rate control algorithms is 
@@ -172,8 +168,7 @@ The following details pertain to the physical layer and channel models:
 * 802.11ac/ax MU-MIMO is not supported, and no more than 4 antennas can be configured
 * 802.11n/ac/ax beamforming is not supported
 * 802.11n RIFS is not supported
-* 802.11 HCF/HCCA are not implemented
-* 802.11 PCF implementation currently assumes a DTIM interval equal to the beacon interval
+* 802.11 PCF/HCF/HCCA are not implemented
 * Authentication and encryption are missing
 * Processing delays are not modeled
 * The current implementation assumes that secondary channels are always higher than primary channels
@@ -1040,8 +1035,7 @@ Depending on your goal, the common tasks are (in no particular order):
   ``mac-low.*`` to accomplish this.  Handling of control frames is performed in
   ``MacLow::ReceiveOk``.
 * MAC high modification. For example, handling new management frames (think beacon/probe), 
-  beacon/probe generation.  Users usually make changes to ``regular-wifi-mac.*``, 
-  ``infrastructure-wifi-mac.*``,``sta-wifi-mac.*``, ``ap-wifi-mac.*``, or ``adhoc-wifi-mac.*`` to accomplish this.
+  beacon/probe generation.  Users usually make changes to ``regular-wifi-mac.*``,``sta-wifi-mac.*``, ``ap-wifi-mac.*``, or ``adhoc-wifi-mac.*`` to accomplish this.
 * Wi-Fi queue management.  The files ``txop.*`` and ``qos-txop.*`` are of interest for this task.
 * Channel access management.  Users should modify the files ``channel-access-manager.*``, which grant access to
   ``Txop`` and ``QosTxop``.

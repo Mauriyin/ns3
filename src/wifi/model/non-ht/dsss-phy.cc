@@ -20,6 +20,7 @@
  *          Mathieu Lacage <mathieu.lacage@sophia.inria.fr> (for logic ported from wifi-phy)
  */
 
+#include <array>
 #include "dsss-phy.h"
 #include "dsss-ppdu.h"
 #include "ns3/wifi-psdu.h"
@@ -54,6 +55,14 @@ const PhyEntity::ModulationLookupTable DsssPhy::m_dsssModulationLookupTable {
   { "DsssRate11Mbps",  { WIFI_CODE_RATE_UNDEFINED, 256 } }
 };
 /* *NS_CHECK_STYLE_ON* */
+
+// DSSS rates in bits per second
+static const std::array<uint64_t, 4> s_dsssRatesBpsList = {1000000,  2000000, 5500000, 11000000};
+
+const std::array<uint64_t, 4>& GetDsssRatesBpsList (void)
+{
+  return s_dsssRatesBpsList;
+};
 
 DsssPhy::DsssPhy ()
 {
@@ -246,17 +255,6 @@ DsssPhy::GetDsssRate (uint64_t rate)
     }
 }
 
-std::vector<uint64_t>
-DsssPhy::GetDsssRatesBpsList (void)
-{
-  /* *NS_CHECK_STYLE_OFF* */
-  return {
-           1000000,  2000000,
-           5500000, 11000000
-  };
-  /* *NS_CHECK_STYLE_ON* */
-}
-
 #define GET_DSSS_MODE(x, m) \
 WifiMode \
 DsssPhy::Get ## x (void) \
@@ -287,8 +285,9 @@ DsssPhy::CreateDsssMode (std::string uniqueName,
                                           true,
                                           MakeBoundCallback (&GetCodeRate, uniqueName),
                                           MakeBoundCallback (&GetConstellationSize, uniqueName),
-                                          MakeBoundCallback (&GetDataRate, uniqueName, modClass),
                                           MakeBoundCallback (&GetDataRate, uniqueName, modClass), //PhyRate is equivalent to DataRate
+                                          MakeCallback (&GetDataRateFromTxVector), //PhyRate is equivalent to DataRate
+                                          MakeBoundCallback (&GetDataRate, uniqueName, modClass),
                                           MakeCallback (&GetDataRateFromTxVector),
                                           MakeCallback (&IsModeAllowed));
 }
