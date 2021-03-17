@@ -117,8 +117,7 @@ WifiRemoteStationManager::GetTypeId (void)
 }
 
 WifiRemoteStationManager::WifiRemoteStationManager ()
-  : m_pcfSupported (false),
-    m_useNonErpProtection (false),
+  : m_useNonErpProtection (false),
     m_useNonHtProtection (false),
     m_shortPreambleEnabled (false),
     m_shortSlotTimeEnabled (false)
@@ -255,18 +254,6 @@ WifiRemoteStationManager::GetHeSupported (void) const
       return true;
     }
   return false;
-}
-
-void
-WifiRemoteStationManager::SetPcfSupported (bool enable)
-{
-  m_pcfSupported = enable;
-}
-
-bool
-WifiRemoteStationManager::GetPcfSupported (void) const
-{
-  return m_pcfSupported;
 }
 
 bool
@@ -499,7 +486,7 @@ WifiRemoteStationManager::GetDataTxVector (const WifiMacHeader &header)
       v.SetTxPowerLevel (m_defaultTxPowerLevel);
       v.SetChannelWidth (GetChannelWidthForTransmission (mode, m_wifiPhy->GetChannelWidth ()));
       v.SetGuardInterval (ConvertGuardIntervalToNanoSeconds (mode, DynamicCast<WifiNetDevice> (m_wifiPhy->GetDevice ())));
-      v.SetNTx (1);
+      v.SetNTx (GetNumberOfAntennas ());
       v.SetNss (1);
       v.SetNess (0);
       return v;
@@ -566,7 +553,7 @@ WifiRemoteStationManager::GetCtsToSelfTxVector (void)
                        defaultPreamble,
                        ConvertGuardIntervalToNanoSeconds (defaultMode, DynamicCast<WifiNetDevice> (m_wifiPhy->GetDevice ())),
                        GetNumberOfAntennas (),
-                       GetMaxNumberOfTransmitStreams (),
+                       1,
                        0,
                        GetChannelWidthForTransmission (defaultMode, m_wifiPhy->GetChannelWidth ()),
                        false);
@@ -585,7 +572,7 @@ WifiRemoteStationManager::GetRtsTxVector (Mac48Address address)
         v.SetTxPowerLevel (m_defaultTxPowerLevel);
         v.SetChannelWidth (GetChannelWidthForTransmission (mode, m_wifiPhy->GetChannelWidth ()));
         v.SetGuardInterval (ConvertGuardIntervalToNanoSeconds (mode, DynamicCast<WifiNetDevice> (m_wifiPhy->GetDevice ())));
-        v.SetNTx (1);
+        v.SetNTx (GetNumberOfAntennas ());
         v.SetNss (1);
         v.SetNess (0);
         return v;

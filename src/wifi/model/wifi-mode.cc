@@ -32,6 +32,11 @@ bool operator == (const WifiMode &a, const WifiMode &b)
   return a.GetUid () == b.GetUid ();
 }
 
+bool operator != (const WifiMode &a, const WifiMode &b)
+{
+  return a.GetUid () != b.GetUid ();
+}
+
 bool operator < (const WifiMode &a, const WifiMode &b)
 {
   return a.GetUid () < b.GetUid ();
@@ -59,6 +64,12 @@ WifiMode::IsAllowed (uint16_t channelWidth, uint8_t nss) const
 }
 
 uint64_t
+WifiMode::GetPhyRate (uint16_t channelWidth) const
+{
+  return GetPhyRate (channelWidth, 800, 1);
+}
+
+uint64_t
 WifiMode::GetPhyRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const
 {
   WifiModeFactory::WifiModeItem *item = WifiModeFactory::GetFactory ()->Get (m_uid);
@@ -66,9 +77,10 @@ WifiMode::GetPhyRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss
 }
 
 uint64_t
-WifiMode::GetPhyRate (const WifiTxVector& txVector) const
+WifiMode::GetPhyRate (const WifiTxVector& txVector, uint16_t staId) const
 {
-  return GetPhyRate (txVector.GetChannelWidth (), txVector.GetGuardInterval (), txVector.GetNss ());
+  WifiModeFactory::WifiModeItem *item = WifiModeFactory::GetFactory ()->Get (m_uid);
+  return item->GetPhyRateFromTxVectorCallback (txVector, staId);
 }
 
 uint64_t
@@ -233,6 +245,7 @@ WifiModeFactory::CreateWifiMode (std::string uniqueName,
                                  CodeRateCallback codeRateCallback,
                                  ConstellationSizeCallback constellationSizeCallback,
                                  PhyRateCallback phyRateCallback,
+                                 PhyRateFromTxVectorCallback phyRateFromTxVectorCallback,
                                  DataRateCallback dataRateCallback,
                                  DataRateFromTxVectorCallback dataRateFromTxVectorCallback,
                                  ModeAllowedCallback isModeAllowedCallback)
@@ -261,6 +274,7 @@ WifiModeFactory::CreateWifiMode (std::string uniqueName,
   item->GetCodeRateCallback = codeRateCallback;
   item->GetConstellationSizeCallback = constellationSizeCallback;
   item->GetPhyRateCallback = phyRateCallback;
+  item->GetPhyRateFromTxVectorCallback = phyRateFromTxVectorCallback;
   item->GetDataRateCallback = dataRateCallback;
   item->GetDataRateFromTxVectorCallback = dataRateFromTxVectorCallback;
   item->GetNonHtReferenceRateCallback = MakeNullCallback<uint64_t> ();
@@ -280,6 +294,7 @@ WifiModeFactory::CreateWifiMcs (std::string uniqueName,
                                 CodeRateCallback codeRateCallback,
                                 ConstellationSizeCallback constellationSizeCallback,
                                 PhyRateCallback phyRateCallback,
+                                PhyRateFromTxVectorCallback phyRateFromTxVectorCallback,
                                 DataRateCallback dataRateCallback,
                                 DataRateFromTxVectorCallback dataRateFromTxVectorCallback,
                                 NonHtReferenceRateCallback nonHtReferenceRateCallback,
@@ -297,6 +312,7 @@ WifiModeFactory::CreateWifiMcs (std::string uniqueName,
   item->GetCodeRateCallback = codeRateCallback;
   item->GetConstellationSizeCallback = constellationSizeCallback;
   item->GetPhyRateCallback = phyRateCallback;
+  item->GetPhyRateFromTxVectorCallback = phyRateFromTxVectorCallback;
   item->GetDataRateCallback = dataRateCallback;
   item->GetDataRateFromTxVectorCallback = dataRateFromTxVectorCallback;
   item->GetNonHtReferenceRateCallback = nonHtReferenceRateCallback;
@@ -384,6 +400,7 @@ WifiModeFactory::GetFactory (void)
       item->GetCodeRateCallback = MakeNullCallback<WifiCodeRate> ();
       item->GetConstellationSizeCallback = MakeNullCallback<uint16_t> ();
       item->GetPhyRateCallback = MakeNullCallback<uint64_t, uint16_t, uint16_t, uint8_t> ();
+      item->GetPhyRateFromTxVectorCallback = MakeNullCallback<uint64_t, const WifiTxVector&, uint16_t> ();
       item->GetDataRateCallback = MakeNullCallback<uint64_t, uint16_t, uint16_t, uint8_t> ();
       item->GetDataRateFromTxVectorCallback = MakeNullCallback<uint64_t, const WifiTxVector&, uint16_t> ();
       item->GetNonHtReferenceRateCallback = MakeNullCallback<uint64_t> ();

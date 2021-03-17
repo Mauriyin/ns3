@@ -69,13 +69,6 @@ public:
    * \return a WifiMode for ERP-OFDM
    */
   static WifiMode GetErpOfdmRate (uint64_t rate);
-  /**
-   * Return the list of rates (in bps) achievable with
-   * ERP-OFDM.
-   *
-   * \return a vector containing the achievable rates in bps
-   */
-  static std::vector<uint64_t> GetErpOfdmRatesBpsList (void);
 
   /**
    * Return a WifiMode for ERP-OFDM at 6 Mbps.
@@ -157,6 +150,17 @@ public:
    * \return the physical bit rate of this signal in bps.
    */
   static uint64_t GetPhyRate (const std::string& name, uint16_t channelWidth, uint16_t guardInterval, uint8_t nss);
+  /**
+   * Return the PHY rate corresponding to
+   * the supplied TXVECTOR.
+   * This function is mainly used as a callback
+   * for WifiMode operation.
+   *
+   * \param txVector the TXVECTOR used for the transmission
+   * \param staId the station ID (only here to have a common signature for all callbacks)
+   * \return the physical bit rate of this signal in bps.
+   */
+  static uint64_t GetPhyRateFromTxVector (const WifiTxVector& txVector, uint16_t staId);
   /**
    * Return the data rate corresponding to
    * the supplied TXVECTOR.
