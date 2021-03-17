@@ -240,7 +240,8 @@ def bianchi_11(data_rate, ack_rate, k, difs, fer = 0.0):
     for i in range(int(m)):
         ps = ps + np.power(2*peq, i) 
     tau_ap = 2./(1 + W + peq*W*ps) 
-    b = np.argmin(np.abs(tau1 - tau_ap))
+    pc_sta = 1 - (1 - tau_ap)*np.power((1 -tau_sta), (n-2))
+    b = np.argmin(np.abs(tau1 - pc_sta))
     tau_ap = tau_ap[b]
     tau_sta = tau_sta[b]
 
