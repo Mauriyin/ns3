@@ -1352,7 +1352,9 @@ main (int argc, char *argv[])
 
   if (bianchi)
     {
-      filterOutNonAddbaEstablished = true;
+      filterOutNonAddbaEstablished = false;
+      maxQueueDelay = duration * 1000;
+      disableArp = true;
       useExplicitBarAfterMissedBlockAck = false;
       beaconInterval = std::min<uint64_t> ((ceil ((duration * 1000000) / 1024) * 1024), (65535 * 1024)); //beacon interval needs to be a multiple of time units (1024 us)
       maxMissedBeacons = 4294967295;
