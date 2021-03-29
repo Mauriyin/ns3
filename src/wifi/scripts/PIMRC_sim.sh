@@ -8,7 +8,7 @@ cd ../examples
 for i in 1; do #Iteration(seed)
 for j in 1; do #Number of STAs
 RngRunpar=${i}
-npar=${j}
+npar=5
 Res=Sim
 
 #ns-3 Parameters

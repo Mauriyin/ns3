@@ -85,8 +85,8 @@
 #include <ns3/spectrum-module.h>
 #include <ns3/applications-module.h>
 #include <ns3/propagation-module.h>
-#include <ns3/ieee-80211ax-indoor-propagation-loss-model.h>
-#include <ns3/itu-umi-propagation-loss-model.h>
+//#include <ns3/ieee-80211ax-indoor-propagation-loss-model.h>
+//#include <ns3/itu-umi-propagation-loss-model.h>
 #include <ns3/flow-monitor-module.h>
 #include <ns3/flow-monitor-helper.h>
 
@@ -968,44 +968,44 @@ void ProcessPacket (std::string context,
     }
 }
 
-void MonitorSniffRx (std::string context,
-                     Ptr<const Packet> packet,
-                     uint16_t channelFreqMhz,
-                     WifiTxVector txVector,
-                     MpduInfo aMpdu,
-                     SignalNoiseDbm signalNoise)
-{
-  if (packet)
-    {
-      Ptr <Packet> packetCopy = packet->Copy();
-      AmpduTag ampdu;
-      if (packetCopy->RemovePacketTag (ampdu))
-        {
-          // A-MPDU frame
-          MpduAggregator::DeaggregatedMpdus packets = MpduAggregator::Deaggregate (packetCopy);
-          for (MpduAggregator::DeaggregatedMpdusCI n = packets.begin (); n != packets.end (); ++n)
-            {
-              std::pair<Ptr<Packet>, AmpduSubframeHeader> deAggPair = (std::pair<Ptr<Packet>, AmpduSubframeHeader>) * n;
-              Ptr<Packet> aggregatedPacket = deAggPair.first;
-              ProcessPacket (context,
-                             aggregatedPacket,
-                             channelFreqMhz,
-                             txVector,
-                             aMpdu,
-                             signalNoise);
-            }
-        }
-      else
-        {
-          ProcessPacket (context,
-                         packet,
-                         channelFreqMhz,
-                         txVector,
-                         aMpdu,
-                         signalNoise);
-        }
-    }
-}
+// void MonitorSniffRx (std::string context,
+//                      Ptr<const Packet> packet,
+//                      uint16_t channelFreqMhz,
+//                      WifiTxVector txVector,
+//                      MpduInfo aMpdu,
+//                      SignalNoiseDbm signalNoise)
+// {
+//   if (packet)
+//     {
+//       Ptr <Packet> packetCopy = packet->Copy();
+//       AmpduTag ampdu;
+//       if (packetCopy->RemovePacketTag (ampdu))
+//         {
+//           // A-MPDU frame
+//           MpduAggregator::DeaggregatedMpdus packets = MpduAggregator::Deaggregate (packetCopy);
+//           for (MpduAggregator::DeaggregatedMpdusCI n = packets.begin (); n != packets.end (); ++n)
+//             {
+//               std::pair<Ptr<Packet>, AmpduSubframeHeader> deAggPair = (std::pair<Ptr<Packet>, AmpduSubframeHeader>) * n;
+//               Ptr<Packet> aggregatedPacket = deAggPair.first;
+//               ProcessPacket (context,
+//                              aggregatedPacket,
+//                              channelFreqMhz,
+//                              txVector,
+//                              aMpdu,
+//                              signalNoise);
+//             }
+//         }
+//       else
+//         {
+//           ProcessPacket (context,
+//                          packet,
+//                          channelFreqMhz,
+//                          txVector,
+//                          aMpdu,
+//                          signalNoise);
+//         }
+//     }
+// }
 
 void
 SaveUdpFlowMonitorStats (std::string filename, std::string simulationParams, Ptr<FlowMonitor> monitor, FlowMonitorHelper& flowmonHelper, double duration)
@@ -1458,7 +1458,7 @@ main (int argc, char *argv[])
   int freq;
   if (standard == "11a")
     {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211a);
+      wifi.SetStandard (WIFI_STANDARD_80211a);
       dataRate = "OfdmRate6Mbps";
       freq = 5180;
       if (bw != 20)
@@ -1467,53 +1467,54 @@ main (int argc, char *argv[])
           return 1;
         }
     }
-  else if (standard == "11_10MHZ")
-    {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211_10MHZ);
-      dataRate = "OfdmRate3MbpsBW10MHz";
-      freq = 5860;
-      if (bw != 10)
-        {
-          std::cout << "Bandwidth is not compatible with standard" << std::endl;
-          return 1;
-        }
-    }
-  else if (standard == "11_5MHZ")
-    {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211_5MHZ);
-      dataRate = "OfdmRate1_5MbpsBW5MHz";
-      freq = 5860;
-      if (bw != 5)
-        {
-          std::cout << "Bandwidth is not compatible with standard" << std::endl;
-          return 1;
-        }
-    }
-  else if (standard == "11n_2_4GHZ")
-    {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211n_2_4GHZ);
-      dataRate = "HtMcs" + ossMcs.str ();
-      freq = 2402 + (bw / 2); //so as to have 2412/2422 for 20/40
-      if (bw != 20 && bw != 40)
-        {
-          std::cout << "Bandwidth is not compatible with standard" << std::endl;
-          return 1;
-        }
-    }
-  else if (standard == "11n_5GHZ")
-    {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211n_5GHZ);
-      dataRate = "HtMcs" + ossMcs.str ();
-      freq = 5170 + (bw / 2); //so as to have 5180/5190 for 20/40
-      if (bw != 20 && bw != 40)
-        {
-          std::cout << "Bandwidth is not compatible with standard" << std::endl;
-          return 1;
-        }
-    }
+  // else if (standard == "11_10MHZ")
+  //   {
+  //     wifi.SetStandard (WIFI_PHY_STANDARD_80211_10MHZ);
+  //     dataRate = "OfdmRate3MbpsBW10MHz";
+  //     freq = 5860;
+  //     if (bw != 10)
+  //       {
+  //         std::cout << "Bandwidth is not compatible with standard" << std::endl;
+  //         return 1;
+  //       }
+  //   }
+  // else if (standard == "11_5MHZ")
+  //   {
+  //     wifi.SetStandard (WIFI_PHY_STANDARD_80211_5MHZ);
+  //     dataRate = "OfdmRate1_5MbpsBW5MHz";
+  //     freq = 5860;
+  //     if (bw != 5)
+  //       {
+  //         std::cout << "Bandwidth is not compatible with standard" << std::endl;
+  //         return 1;
+  //       }
+  //   }
+  // else if (standard == "11n_2_4GHZ")
+  //   {
+  //     wifi.SetStandard (WIFI_PHY_STANDARD_80211n_2_4GHZ);
+  //     dataRate = "HtMcs" + ossMcs.str ();
+  //     freq = 2402 + (bw / 2); //so as to have 2412/2422 for 20/40
+  //     if (bw != 20 && bw != 40)
+  //       {
+  //         std::cout << "Bandwidth is not compatible with standard" << std::endl;
+  //         return 1;
+  //       }
+  //   }
+  // else if (standard == "11n_5GHZ")
+  //   {
+  //     wifi.SetStandard (WIFI_PHY_STANDARD_80211n_5GHZ);
+  //     dataRate = "HtMcs" + ossMcs.str ();
+  //     freq = 5170 + (bw / 2); //so as to have 5180/5190 for 20/40
+  //     if (bw != 20 && bw != 40)
+  //       {
+  //         std::cout << "Bandwidth is not compatible with standard" << std::endl;
+  //         return 1;
+  //       }
+  //   }
   else if (standard == "11ac") //spatial-reuseではここが実行
     {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211ac);
+      // wifi.SetStandard (WIFI_PHY_STANDARD_80211ac);
+      wifi.SetStandard (WIFI_STANDARD_80211ac);
       dataRate1 = "VhtMcs" + ossMcs1.str ();  //Multi-BSS scenario (BSS1)
       dataRate2 = "VhtMcs" + ossMcs2.str ();  //Multi-BSS scenario (BSS2)
       dataRate3 = "VhtMcs" + ossMcs3.str ();  //Multi-BSS scenario (BSS3)
@@ -1527,39 +1528,39 @@ main (int argc, char *argv[])
           return 1;
         }
     }
-  else if (standard == "11ax_2_4GHZ")
-    {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211ax_2_4GHZ);
-      dataRate = "HeMcs" + ossMcs.str ();
-      freq = 2402 + (bw / 2); //so as to have 2412/2422/2442 for 20/40/80
-      if (bw != 20 && bw != 40 && bw != 80)
-        {
-          std::cout << "Bandwidth is not compatible with standard" << std::endl;
-          return 1;
-        }
-    }
-  else if (standard == "11ax_5GHZ")
-    {
-      wifi.SetStandard (WIFI_PHY_STANDARD_80211ax_5GHZ);
-      dataRate = "HeMcs" + ossMcs.str ();
-      freq = 5170 + (bw / 2); //so as to have 5180/5190/5210/5250 for 20/40/80/160
-      if (bw != 20 && bw != 40 && bw != 80 && bw != 160)
-        {
-          std::cout << "Bandwidth is not compatible with standard" << std::endl;
-          return 1;
-        }
-    }
-  else
-    {
-      std::cout << "Unknown OFDM standard (please refer to the listed possible values)" << std::endl;
-      return 1;
-    }
+  // else if (standard == "11ax_2_4GHZ")
+  //   {
+  //     wifi.SetStandard (WIFI_PHY_STANDARD_80211ax_2_4GHZ);
+  //     dataRate = "HeMcs" + ossMcs.str ();
+  //     freq = 2402 + (bw / 2); //so as to have 2412/2422/2442 for 20/40/80
+  //     if (bw != 20 && bw != 40 && bw != 80)
+  //       {
+  //         std::cout << "Bandwidth is not compatible with standard" << std::endl;
+  //         return 1;
+  //       }
+  //   }
+  // else if (standard == "11ax_5GHZ")
+  //   {
+  //     wifi.SetStandard (WIFI_PHY_STANDARD_80211ax_5GHZ);
+  //     dataRate = "HeMcs" + ossMcs.str ();
+  //     freq = 5170 + (bw / 2); //so as to have 5180/5190/5210/5250 for 20/40/80/160
+  //     if (bw != 20 && bw != 40 && bw != 80 && bw != 160)
+  //       {
+  //         std::cout << "Bandwidth is not compatible with standard" << std::endl;
+  //         return 1;
+  //       }
+  //   }
+  // else
+  //   {
+  //     std::cout << "Unknown OFDM standard (please refer to the listed possible values)" << std::endl;
+  //     return 1;
+  //   }
 
-  // disable ObssPd if not 11ax
-  if ((standard != "11ax_2_4GHZ") && (standard != "11ax_5GHZ"))
-    {
-      enableObssPd = false;
-    }
+  // // disable ObssPd if not 11ax
+  // if ((standard != "11ax_2_4GHZ") && (standard != "11ax_5GHZ"))
+  //   {
+  //     enableObssPd = false;
+  //   }
 
   // total expected nodes.  n STAs for each AP
 /////////////////////////////////////////////////////ノードの生成（ここから）//////////////////////////////////////////////////////////////////
@@ -1721,7 +1722,8 @@ bytesTransmitted[nodeId] = 0;
 
   // PHY setup
 ///////////////////////////////////////////////////////////////Pass Loss Modelの設定（ここから）///////////////////////////////////////////////////////////////////////////
-  SpectrumWifiPhyHelper spectrumPhy = SpectrumWifiPhyHelper::Default (); //PHYのパラメータを保存する値を定義
+  //SpectrumWifiPhyHelper spectrumPhy = SpectrumWifiPhyHelper::Default ();
+  SpectrumWifiPhyHelper spectrumPhy = SpectrumWifiPhyHelper(); //PHYのパラメータを保存する値を定義
   Ptr<MultiModelSpectrumChannel> spectrumChannel
     = CreateObject<MultiModelSpectrumChannel> ();
   // path loss model uses one of the 802.11ax path loss models
@@ -1731,7 +1733,7 @@ bytesTransmitted[nodeId] = 0;
   // additional code tweaks needed for Test 1 and Test 3,
   // handling of 'W=1 wall' and using the ItuUmitPropagationLossModel
   // for Test 4.
-  uint64_t lossModelStream = 500;
+  //uint64_t lossModelStream = 500;
   if (scenario == "logdistance")
     {
       Ptr<LogDistancePropagationLossModel> lossModel = CreateObject<LogDistancePropagationLossModel> ();
@@ -1741,43 +1743,43 @@ bytesTransmitted[nodeId] = 0;
       lossModel ->SetAttribute ("ReferenceLoss", DoubleValue (50)); //参照ロス
       spectrumChannel->AddPropagationLossModel (lossModel);   
     }
-  else if (scenario == "residential")
-    {
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::DistanceBreakpoint", DoubleValue (5.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Walls", DoubleValue (1.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::WallsFactor", DoubleValue (5.0));
+  // else if (scenario == "residential")
+  //   {
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::DistanceBreakpoint", DoubleValue (5.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Walls", DoubleValue (1.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::WallsFactor", DoubleValue (5.0));
 
-      Ptr<Ieee80211axIndoorPropagationLossModel> lossModel = CreateObject<Ieee80211axIndoorPropagationLossModel> ();
-      lossModel->AssignStreams (lossModelStream);
-      spectrumChannel->AddPropagationLossModel (lossModel);
-    }
-  else if (scenario == "enterprise")
-    {
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::DistanceBreakpoint", DoubleValue (10.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Walls", DoubleValue (1.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::WallsFactor", DoubleValue (7.0));
+  //     Ptr<Ieee80211axIndoorPropagationLossModel> lossModel = CreateObject<Ieee80211axIndoorPropagationLossModel> ();
+  //     lossModel->AssignStreams (lossModelStream);
+  //     spectrumChannel->AddPropagationLossModel (lossModel);
+  //   }
+  // else if (scenario == "enterprise")
+  //   {
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::DistanceBreakpoint", DoubleValue (10.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Walls", DoubleValue (1.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::WallsFactor", DoubleValue (7.0));
 
-      Ptr<Ieee80211axIndoorPropagationLossModel> lossModel = CreateObject<Ieee80211axIndoorPropagationLossModel> ();
-      lossModel->AssignStreams (lossModelStream);
-      spectrumChannel->AddPropagationLossModel (lossModel);
-    }
-  else if (scenario == "indoor")
-    {
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::DistanceBreakpoint", DoubleValue (10.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Walls", DoubleValue (0.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::WallsFactor", DoubleValue (0.0));
-      Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Sigma", DoubleValue (sigma));
+  //     Ptr<Ieee80211axIndoorPropagationLossModel> lossModel = CreateObject<Ieee80211axIndoorPropagationLossModel> ();
+  //     lossModel->AssignStreams (lossModelStream);
+  //     spectrumChannel->AddPropagationLossModel (lossModel);
+  //   }
+  // else if (scenario == "indoor")
+  //   {
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::DistanceBreakpoint", DoubleValue (10.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Walls", DoubleValue (0.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::WallsFactor", DoubleValue (0.0));
+  //     Config::SetDefault ("ns3::Ieee80211axIndoorPropagationLossModel::Sigma", DoubleValue (sigma));
 
-      Ptr<Ieee80211axIndoorPropagationLossModel> lossModel = CreateObject<Ieee80211axIndoorPropagationLossModel> ();
-      lossModel->AssignStreams (lossModelStream);
-      spectrumChannel->AddPropagationLossModel (lossModel);
-    }
-  else if (scenario == "outdoor")
-    {
-      Ptr<ItuUmiPropagationLossModel> lossModel = CreateObject<ItuUmiPropagationLossModel> ();
-      lossModel->AssignStreams (lossModelStream);
-      spectrumChannel->AddPropagationLossModel (lossModel);
-    }
+  //     Ptr<Ieee80211axIndoorPropagationLossModel> lossModel = CreateObject<Ieee80211axIndoorPropagationLossModel> ();
+  //     lossModel->AssignStreams (lossModelStream);
+  //     spectrumChannel->AddPropagationLossModel (lossModel);
+  //   }
+  // else if (scenario == "outdoor")
+  //   {
+  //     Ptr<ItuUmiPropagationLossModel> lossModel = CreateObject<ItuUmiPropagationLossModel> ();
+  //     lossModel->AssignStreams (lossModelStream);
+  //     spectrumChannel->AddPropagationLossModel (lossModel);
+  //   }
   else
     {
       std::cout << "Unknown scenario: " << scenario << ". Must be one of:  residential, enterprise, indoor or outdoor." << std::endl;
@@ -3531,10 +3533,10 @@ std::cout << "BSS6_MCS = " << mcs6 << std::endl;
         }
     }
   
-  Config::Connect ("/NodeList/*/DeviceList/*/Phy/MonitorSnifferRx", MakeCallback (&MonitorSniffRx));
+  //Config::Connect ("/NodeList/*/DeviceList/*/Phy/MonitorSnifferRx", MakeCallback (&MonitorSniffRx));
   Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyTxBegin", MakeCallback (&PacketTx));
   Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::UdpServer/RxWithAddresses", MakeCallback (&PacketRx));
-  Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/ObssPdAlgorithm/Reset", MakeCallback (&PhyReset));
+  //Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/ObssPdAlgorithm/Reset", MakeCallback (&PhyReset));
 
   if (performTgaxTimingChecks)
     {
