@@ -21,8 +21,6 @@
  */
 
 #include "ns3/wifi-net-device.h"
-#include "ns3/minstrel-wifi-manager.h"
-#include "ns3/minstrel-ht-wifi-manager.h"
 #include "ns3/ap-wifi-mac.h"
 #include "ns3/ampdu-subframe-header.h"
 #include "ns3/mobility-model.h"
@@ -955,6 +953,7 @@ WifiHelper::EnableLogComponents (void)
   LogComponentEnable ("MinstrelWifiManager", LOG_LEVEL_ALL);
   LogComponentEnable ("MpduAggregator", LOG_LEVEL_ALL);
   LogComponentEnable ("MsduAggregator", LOG_LEVEL_ALL);
+  LogComponentEnable ("MultiUserScheduler", LOG_LEVEL_ALL);
   LogComponentEnable ("NistErrorRateModel", LOG_LEVEL_ALL);
   LogComponentEnable ("ObssPdAlgorithm", LOG_LEVEL_ALL);
   LogComponentEnable ("OfdmPhy", LOG_LEVEL_ALL);
@@ -1021,18 +1020,7 @@ WifiHelper::AssignStreams (NetDeviceContainer c, int64_t stream)
           currentStream += wifi->GetPhy ()->AssignStreams (currentStream);
 
           //Handle any random numbers in the station managers.
-          Ptr<WifiRemoteStationManager> manager = wifi->GetRemoteStationManager ();
-          Ptr<MinstrelWifiManager> minstrel = DynamicCast<MinstrelWifiManager> (manager);
-          if (minstrel)
-            {
-              currentStream += minstrel->AssignStreams (currentStream);
-            }
-
-          Ptr<MinstrelHtWifiManager> minstrelHt = DynamicCast<MinstrelHtWifiManager> (manager);
-          if (minstrelHt)
-            {
-              currentStream += minstrelHt->AssignStreams (currentStream);
-            }
+          currentStream += wifi->GetRemoteStationManager ()->AssignStreams (currentStream);
 
           //Handle any random numbers in the MAC objects.
           Ptr<WifiMac> mac = wifi->GetMac ();

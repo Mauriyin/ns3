@@ -24,6 +24,8 @@
 #include "wifi-mac.h"
 #include "qos-txop.h"
 #include "ssid.h"
+#include <set>
+#include <unordered_map>
 
 namespace ns3 {
 
@@ -32,6 +34,10 @@ class MacTxMiddle;
 class ChannelAccessManager;
 class ExtendedCapabilities;
 class FrameExchangeManager;
+class WifiPsdu;
+enum WifiTxTimerReason : uint8_t;
+
+typedef std::unordered_map <uint16_t /* staId */, Ptr<WifiPsdu> /* PSDU */> WifiPsduMap;
 
 /**
  * \brief base class for all MAC-level wifi objects.
@@ -69,6 +75,7 @@ public:
   void ResetWifiPhy (void);
   virtual void SetWifiRemoteStationManager (const Ptr<WifiRemoteStationManager> stationManager);
   void ConfigureStandard (WifiStandard standard);
+  TypeOfStation GetTypeOfStation (void) const;
 
   /**
    * This type defines the callback of a higher layer that a
@@ -86,21 +93,6 @@ public:
 
   // Should be implemented by child classes
   virtual void Enqueue (Ptr<Packet> packet, Mac48Address to) = 0;
-
-  /**
-   * The packet we sent was successfully received by the receiver
-   * (i.e. we received an Ack from the receiver).
-   *
-   * \param hdr the header of the packet that we successfully sent
-   */
-  virtual void TxOk (const WifiMacHeader &hdr);
-  /**
-   * The packet we sent was successfully received by the receiver
-   * (i.e. we did not receive an Ack from the receiver).
-   *
-   * \param hdr the header of the packet that we failed to sent
-   */
-  virtual void TxFailed (const WifiMacHeader &hdr);
 
   /**
    * Get the Frame Exchange Manager
@@ -175,6 +167,7 @@ public:
 protected:
   virtual void DoInitialize ();
   virtual void DoDispose ();
+  void SetTypeOfStation (TypeOfStation type);
 
   Ptr<MacRxMiddle> m_rxMiddle;                      //!< RX middle (defragmentation etc.)
   Ptr<MacTxMiddle> m_txMiddle;                      //!< TX middle (aggregation etc.)
@@ -237,16 +230,6 @@ protected:
   void ConfigureContentionWindow (uint32_t cwMin, uint32_t cwMax);
 
   /**
-   * This method is invoked by a subclass to specify what type of
-   * station it is implementing. This is something that the channel
-   * access functions (instantiated within this class as QosTxop's)
-   * need to know.
-   *
-   * \param type the type of station.
-   */
-  void SetTypeOfStation (TypeOfStation type);
-
-  /**
    * This method acts as the MacRxMiddle receive callback and is
    * invoked to notify us that a frame has been received. The
    * implementation is intended to capture logic that is going to be
@@ -277,16 +260,6 @@ protected:
    * \param mpdu the MPDU containing the A-MSDU.
    */
   virtual void DeaggregateAmsduAndForward (Ptr<WifiMacQueueItem> mpdu);
-
-  /**
-   * This method can be called to accept a received ADDBA Request. An
-   * ADDBA Response will be constructed and queued for transmission.
-   *
-   * \param reqHdr a pointer to the received ADDBA Request header.
-   * \param originator the MAC address of the originator.
-   */
-  void SendAddBaResponse (const MgtAddBaRequestHeader *reqHdr,
-                          Mac48Address originator);
 
   /**
    * Enable or disable QoS support for the device.
@@ -423,6 +396,8 @@ private:
    */
   void SetBkBlockAckInactivityTimeout (uint16_t timeout);
 
+  TypeOfStation m_typeOfStation;                        //!< the type of station
+
   /**
    * This Boolean is set \c true iff this WifiMac is to model
    * 802.11e/WMM style Quality of Service. It is exposed through the
@@ -463,6 +438,87 @@ private:
 
   TracedCallback<const WifiMacHeader &> m_txOkCallback; ///< transmit OK callback
   TracedCallback<const WifiMacHeader &> m_txErrCallback; ///< transmit error callback
+
+  /// TracedCallback for acked/nacked MPDUs typedef
+  typedef TracedCallback<Ptr<const WifiMacQueueItem>> MpduTracedCallback;
+
+  MpduTracedCallback m_ackedMpduCallback;  ///< ack'ed MPDU callback
+  MpduTracedCallback m_nackedMpduCallback; ///< nack'ed MPDU callback
+
+  /**
+   * TracedCallback signature for MPDU drop events.
+   *
+   * \param reason the reason why the MPDU was dropped (\see WifiMacDropReason)
+   * \param mpdu the dropped MPDU
+   */
+  typedef void (* DroppedMpduCallback)(WifiMacDropReason reason, Ptr<const WifiMacQueueItem> mpdu);
+
+  /// TracedCallback for MPDU drop events typedef
+  typedef TracedCallback<WifiMacDropReason, Ptr<const WifiMacQueueItem>> DroppedMpduTracedCallback;
+
+  /**
+   * This trace indicates that an MPDU was dropped for the given reason.
+   */
+  DroppedMpduTracedCallback m_droppedMpduCallback;
+
+  /**
+   * TracedCallback signature for MPDU response timeout events.
+   *
+   * \param reason the reason why the timer was started
+   * \param mpdu the MPDU whose response was not received before the timeout
+   * \param txVector the TXVECTOR used to transmit the MPDU
+   */
+  typedef void (* MpduResponseTimeoutCallback)(uint8_t reason, Ptr<const WifiMacQueueItem> mpdu,
+                                               const WifiTxVector& txVector);
+
+  /// TracedCallback for MPDU response timeout events typedef
+  typedef TracedCallback<uint8_t, Ptr<const WifiMacQueueItem>, const WifiTxVector&> MpduResponseTimeoutTracedCallback;
+
+  /**
+   * MPDU response timeout traced callback.
+   * This trace source is fed by a WifiTxTimer object.
+   */
+  MpduResponseTimeoutTracedCallback m_mpduResponseTimeoutCallback;
+
+  /**
+   * TracedCallback signature for PSDU response timeout events.
+   *
+   * \param reason the reason why the timer was started
+   * \param psdu the PSDU whose response was not received before the timeout
+   * \param txVector the TXVECTOR used to transmit the PSDU
+   */
+  typedef void (* PsduResponseTimeoutCallback)(uint8_t reason, Ptr<const WifiPsdu> psdu,
+                                               const WifiTxVector& txVector);
+
+  /// TracedCallback for PSDU response timeout events typedef
+  typedef TracedCallback<uint8_t, Ptr<const WifiPsdu>, const WifiTxVector&> PsduResponseTimeoutTracedCallback;
+
+  /**
+   * PSDU response timeout traced callback.
+   * This trace source is fed by a WifiTxTimer object.
+   */
+  PsduResponseTimeoutTracedCallback m_psduResponseTimeoutCallback;
+
+  /**
+   * TracedCallback signature for PSDU map response timeout events.
+   *
+   * \param reason the reason why the timer was started
+   * \param psduMap the PSDU map for which not all responses were received before the timeout
+   * \param missingStations the MAC addresses of the stations that did not respond
+   * \param nTotalStations the total number of stations that had to respond
+   */
+  typedef void (* PsduMapResponseTimeoutCallback)(uint8_t reason, WifiPsduMap* psduMap,
+                                                  const std::set<Mac48Address>* missingStations,
+                                                  std::size_t nTotalStations);
+
+  /// TracedCallback for PSDU map response timeout events typedef
+  typedef TracedCallback<uint8_t, WifiPsduMap*, const std::set<Mac48Address>*, std::size_t> PsduMapResponseTimeoutTracedCallback;
+
+  /**
+   * PSDU map response timeout traced callback.
+   * This trace source is fed by a WifiTxTimer object.
+   */
+  PsduMapResponseTimeoutTracedCallback m_psduMapResponseTimeoutCallback;
 
   bool m_shortSlotTimeSupported; ///< flag whether short slot time is supported
   bool m_ctsToSelfSupported;     ///< flag indicating whether CTS-To-Self is supported

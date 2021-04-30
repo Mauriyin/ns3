@@ -156,6 +156,16 @@ public:
   virtual void SetupMac (const Ptr<WifiMac> mac);
 
   /**
+   * Assign a fixed random variable stream number to the random variables
+   * used by this model.  Return the number of streams (possibly zero) that
+   * have been assigned.
+   *
+   * \param stream first stream index to use
+   * \return the number of stream indices assigned by this model
+   */
+  virtual int64_t AssignStreams (int64_t stream);
+
+  /**
    * Sets the maximum STA short retry count (SSRC).
    *
    * \param maxSsrc the maximum SSRC
@@ -648,19 +658,19 @@ public:
    * used by the sender.
    *
    * \param to the MAC address of the Ack receiver
-   * \param dataTxMode the mode of the Data used by the sender
+   * \param dataTxVector the TXVECTOR of the Data used by the sender
    * \return TXVECTOR for the Ack
    */
-  WifiTxVector GetAckTxVector (Mac48Address to, WifiMode dataTxMode) const;
+  WifiTxVector GetAckTxVector (Mac48Address to, const WifiTxVector& dataTxVector) const;
   /**
    * Return a TXVECTOR for the BlockAck frame given the destination and the mode of the Data
    * used by the sender.
    *
    * \param to the MAC address of the BlockAck receiver
-   * \param dataTxMode the mode of the Data used by the sender
+   * \param dataTxVector the TXVECTOR of the Data used by the sender
    * \return TXVECTOR for the BlockAck
    */
-  WifiTxVector GetBlockAckTxVector (Mac48Address to, WifiMode dataTxMode) const;
+  WifiTxVector GetBlockAckTxVector (Mac48Address to, const WifiTxVector& dataTxVector) const;
   /**
    * Get control answer mode function.
    *
@@ -739,11 +749,11 @@ public:
   /**
    * \param address remote address
    * \param rxSignalInfo the info on the received signal (\see RxSignalInfo)
-   * \param txMode the transmission mode used for the packet received
+   * \param txVector the TXVECTOR used for the packet received
    *
    * Should be invoked whenever a packet is successfully received.
    */
-  void ReportRxOk (Mac48Address address, RxSignalInfo rxSignalInfo, WifiMode txMode);
+  void ReportRxOk (Mac48Address address, RxSignalInfo rxSignalInfo, WifiTxVector txVector);
 
   /**
    * \param header MAC header
@@ -1026,6 +1036,13 @@ protected:
 
 
 private:
+  /**
+   * If the given TXVECTOR is used for a MU transmission, return the STAID of
+   * the station with the given address if we are an AP or our own STAID if we
+   * are a STA associated with some AP. Otherwise, return SU_STA_ID.
+   */
+  uint16_t GetStaId (Mac48Address address, const WifiTxVector& txVector) const;
+
   /**
    * \param station the station that we need to communicate
    * \param size the size of the frame to send in bytes
