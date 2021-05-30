@@ -63,6 +63,7 @@ MultiUserScheduler::DoDispose (void)
   m_dlInfo.psduMap.clear ();
   m_dlInfo.txParams.Clear ();
   m_ulInfo.txParams.Clear ();
+  m_ulInfo.trigger = 0;
   Object::DoDispose ();
 }
 
@@ -113,6 +114,7 @@ MultiUserScheduler::SetWifiMac (Ptr<ApWifiMac> mac)
                    "MultiUserScheduler can only be installed on HE APs");
 
   m_heFem = DynamicCast<HeFrameExchangeManager> (m_apMac->GetFrameExchangeManager ());
+  m_heFem->SetMultiUserScheduler (this);
 }
 
 Ptr<WifiRemoteStationManager>

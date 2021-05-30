@@ -24,6 +24,7 @@ callback_classes = [
     ['void', 'unsigned char', 'ns3::Ptr<const ns3::WifiMacQueueItem>', 'const ns3::WifiTxVector &', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],
     ['void', 'unsigned char', 'ns3::Ptr<const ns3::WifiPsdu>', 'const ns3::WifiTxVector &', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],
     ['void', 'unsigned char', 'std::unordered_map<unsigned short, ns3::Ptr<ns3::WifiPsdu>, std::hash<unsigned short>, std::equal_to<unsigned short>, std::allocator<std::pair<const unsigned short, ns3::Ptr<ns3::WifiPsdu>>>> *', 'const std::set<ns3::Mac48Address, std::less<ns3::Mac48Address>, std::allocator<ns3::Mac48Address>> *', 'unsigned long', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],
+    ['void', 'unsigned short', 'ns3::Mac48Address', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],
     ['void', 'double', 'double', 'ns3::Mac48Address', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],
     ['void', 'ns3::DataRate', 'ns3::DataRate', 'ns3::Mac48Address', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],
     ['void', 'unsigned char', 'double', 'bool', 'double', 'double', 'ns3::empty', 'ns3::empty', 'ns3::empty', 'ns3::empty'],

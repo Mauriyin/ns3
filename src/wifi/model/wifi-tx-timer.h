@@ -59,6 +59,9 @@ public:
       WAIT_BLOCK_ACK,
       WAIT_NORMAL_ACK_AFTER_DL_MU_PPDU,
       WAIT_BLOCK_ACKS_IN_TB_PPDU,
+      WAIT_TB_PPDU_AFTER_BASIC_TF,
+      WAIT_QOS_NULL_AFTER_BSRP_TF,
+      WAIT_BLOCK_ACK_AFTER_TB_PPDU,
     };
 
   /** Default constructor */
@@ -183,72 +186,46 @@ private:
   void Timeout (MEM mem_ptr, OBJ obj, Args... args);
 
   /**
-   * This method is called when the timer expires to feed the trace sources
-   * reporting timeout events. This method does nothing, while its specializations
-   * actually do the job of feeding the trace sources.
+   * This method is called when the timer expires to feed the MPDU response
+   * timeout callback.
    *
-   * \tparam Args \deduced Type template parameter pack
-   * \param args The arguments to pass to the trace sources
+   * \param item the MPDU followed by no response
+   * \param txVector the TXVECTOR used to transmit the MPDU
    */
-  template<typename... Args>
-  void FeedTraceSource (Args... args);
+  void FeedTraceSource (Ptr<WifiMacQueueItem> item, WifiTxVector txVector);
+
+  /**
+   * This method is called when the timer expires to feed the PSDU response
+   * timeout callback.
+   *
+   * \param psdu the PSDU followed by no response
+   * \param txVector the TXVECTOR used to transmit the PSDU
+   */
+  void FeedTraceSource (Ptr<WifiPsdu> psdu, WifiTxVector txVector);
+
+  /**
+   * This method is called when the timer expires to feed the PSDU map response
+   * timeout callback.
+   *
+   * \param psduMap the PSDU map for which not all responses were received
+   * \param missingStations the set of stations that did not respond
+   * \param nTotalStations the total number of expected responses
+   */
+  void FeedTraceSource (WifiPsduMap* psduMap, std::set<Mac48Address>* missingStations,
+                        std::size_t nTotalStations);
 
   EventId m_timeoutEvent;         //!< the timeout event after a missing response
   Reason m_reason;                //!< the reason why the timer was started
   Ptr<EventImpl> m_endRxEvent;       //!< event to schedule upon RXSTART.indication
   bool m_rescheduled;             //!< whether the timer has been already rescheduled
 
-  //!< the MPDU response timeout callback
+  /// the MPDU response timeout callback
   mutable MpduResponseTimeout m_mpduResponseTimeoutCallback;
-  //!< the PSDU response timeout callback
+  /// the PSDU response timeout callback
   mutable PsduResponseTimeout m_psduResponseTimeoutCallback;
-  //!< the PSDU map response timeout callback
+  /// the PSDU map response timeout callback
   mutable PsduMapResponseTimeout m_psduMapResponseTimeoutCallback;
 };
-
-} // namespace ns3
-
-
-/***************************************************************
- *  Declaration of member function template specialization.
- ***************************************************************/
-
-namespace ns3 {
-
-/**
- * Explicit specialization of the FeedTraceSource member function template
- * that feeds the MPDU response timeout callback.
- *
- * \param item the MPDU followed by no response
- * \param txVector the TXVECTOR used to transmit the MPDU
- */
-template<>
-void WifiTxTimer::FeedTraceSource<Ptr<WifiMacQueueItem>, WifiTxVector> (Ptr<WifiMacQueueItem> item,
-                                                                        WifiTxVector txVector);
-
-/**
- * Explicit specialization of the FeedTraceSource member function template
- * that feeds the PSDU response timeout callback.
- *
- * \param psdu the PSDU followed by no response
- * \param txVector the TXVECTOR used to transmit the PSDU
- */
-template<>
-void WifiTxTimer::FeedTraceSource<Ptr<WifiPsdu>, WifiTxVector> (Ptr<WifiPsdu> psdu,
-                                                                WifiTxVector txVector);
-
-/**
- * Explicit specialization of the FeedTraceSource member function template
- * that feeds the PSDU map response timeout callback.
- *
- * \param psduMap the PSDU map for which not all responses were received
- * \param missingStations the set of stations that did not respond
- * \param nTotalStations the total number of expected responses
- */
-template<>
-void WifiTxTimer::FeedTraceSource<WifiPsduMap*, std::set<Mac48Address>*, std::size_t> (WifiPsduMap* psduMap,
-                                                                                       std::set<Mac48Address>* missingStations,
-                                                                                       std::size_t nTotalStations);
 
 } // namespace ns3
 
@@ -282,12 +259,6 @@ WifiTxTimer::Timeout (MEM mem_ptr, OBJ obj, Args... args)
 
   // Invoke the method set by the user
   ((*obj).*mem_ptr)(std::forward<Args> (args)...);
-}
-
-template<typename... Args>
-void
-WifiTxTimer::FeedTraceSource (Args... args)
-{
 }
 
 } //namespace ns3

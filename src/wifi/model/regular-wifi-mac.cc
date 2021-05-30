@@ -477,7 +477,6 @@ RegularWifiMac::SetupEdcaQueue (AcIndex ac)
   edca->SetDroppedMpduCallback (MakeCallback (&DroppedMpduTracedCallback::operator(),
                                               &m_droppedMpduCallback));
   edca->SetAccessCategory (ac);
-  edca->CompleteConfig ();
 
   m_edca.insert (std::make_pair (ac, edca));
 }
@@ -1076,8 +1075,9 @@ RegularWifiMac::GetTypeId (void)
                      "A PSDU whose response was not received before the timeout, along with "
                      "an identifier of the type of timeout (see WifiTxTimer::Reason) and the "
                      "TXVECTOR used to transmit the PSDU. This trace source is fired when a "
-                     "BlockAck is missing after an A-MPDU or a BlockAckReq (possibly in the "
-                     "context of the acknowledgment of a DL MU PPDU in SU format).",
+                     "BlockAck is missing after an A-MPDU, a BlockAckReq (possibly in the "
+                     "context of the acknowledgment of a DL MU PPDU in SU format) or a TB PPDU "
+                     "(in the latter case the missing BlockAck is a Multi-STA BlockAck).",
                      MakeTraceSourceAccessor (&RegularWifiMac::m_psduResponseTimeoutCallback),
                      "ns3::RegularWifiMac::PsduResponseTimeoutCallback")
     .AddTraceSource ("PsduMapResponseTimeout",
@@ -1085,8 +1085,9 @@ RegularWifiMac::GetTypeId (void)
                      "along with an identifier of the type of timeout (see WifiTxTimer::Reason), "
                      "the set of MAC addresses of the stations that did not respond and the total "
                      "number of stations that had to respond. This trace source is fired when not "
-                     "all the addressed stations respond to an MU-BAR Trigger frame (either sent as "
-                     "a SU frame or aggregated to PSDUs in the DL MU PPDU.",
+                     "all the addressed stations responded to an MU-BAR Trigger frame (either sent as "
+                     "a SU frame or aggregated to PSDUs in the DL MU PPDU), a Basic Trigger Frame or "
+                     "a BSRP Trigger Frame.",
                      MakeTraceSourceAccessor (&RegularWifiMac::m_psduMapResponseTimeoutCallback),
                      "ns3::RegularWifiMac::PsduMapResponseTimeoutCallback")
   ;
