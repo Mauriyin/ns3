@@ -1,0 +1,3 @@
+[submodule "contrib/ns3-ai"]
+	path = contrib/ns3-ai
+	url = https://github.com/hust-diangroup/ns3-ai.git
