@@ -4,3 +4,4 @@
 !subdir/
 !scratch-simulator.cc
 !wifi-spatial-reuse.cc
+!raa_comparison.cc
