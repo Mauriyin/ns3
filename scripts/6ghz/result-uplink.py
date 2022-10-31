@@ -1,3 +1,17 @@
+#   Copyright (c) 2022 University of Washington
+
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License version 2 as
+#   published by the Free Software Foundation;
+
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import os
 import re
 import numpy as np
@@ -177,8 +191,8 @@ for i in range(4):
     tptBianchi6g = []
     tpt5g = []
     tpt6g = []
-    distance = [5]
-    distances = [5]
+    distance = []
+    distances = [0]
     txPowerDbm5g = 24
     channelWidth = 20*(math.pow(2,i))
     txPowerDbm6g = 10*math.log10(0.8 * channelWidth)
@@ -186,14 +200,7 @@ for i in range(4):
     tptBianchi5g.append(bianchi_result[0])
     tptBianchi6g.append(bianchi_result[0])
 
-    data_dir_5 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre5_dis"+ str(int(5))
-    data_dir_6 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre6_dis"+ str(int(5))
-    tpt_5 = np.array(data_analysis(data_dir_5))
-    tpt_6 = np.array(data_analysis(data_dir_6))
-    tpt5g.append(tpt_5[0])
-    tpt6g.append(tpt_6[0])
-    
-    for k in range(65):
+    for k in range(70):
         dis = 10*(k+1)
         distances.append(dis)
         rxc = path_loss(distance = dis, m_referenceLoss = 46.6777, m_exponent = 2, m_referenceDistance = 1)
@@ -211,24 +218,20 @@ for i in range(4):
         fer = cal_fer(snr)
         bianchi_result = bianchi_ax(data_rates[i][mcs], ack_rates[i][mcs], 1, 0, fer)
         tptBianchi6g.append(bianchi_result[0])
-    for k in range(12):
-        dis = 50*(k+1)
+
+    
+    for k in range(0,700,50):
+        dis = k
         distance.append(dis)
-        data_dir_5 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre5_dis"+ str(int(50*(k+1)))
-        data_dir_6 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre6_dis"+ str(int(50*(k+1)))
+        data_dir_5 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre5_dis"+ str(dis)
+        data_dir_6 =  "uplink_data/mpdu1_band" + str(int(channelWidth)) + "_mcs5_fre6_dis"+ str(dis)
         tpt_5 = np.array(data_analysis(data_dir_5))
         tpt_6 = np.array(data_analysis(data_dir_6))
         tpt5g.append(tpt_5[0])
         tpt6g.append(tpt_6[0])
 
-    distance.append(650)
-    tpt5g.append(0)
-    tpt6g.append(0)
-    # tptBianchi6g.append(0)
-    # tptBianchi5g.append(0)
-    print(distance, tpt5g, tptBianchi6g)
+
     plt.figure(i)
-    
     plt.plot(distances,tptBianchi5g,label='5 GHz Analysis', color='g', linestyle='-')
     plt.plot(distances,tptBianchi6g,label='6 GHz Analysis', color='b', linestyle='-')
     plt.scatter(distance,tpt5g,label='5 GHz ns-3',marker='*',color='black')
